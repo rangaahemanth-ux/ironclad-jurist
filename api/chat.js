@@ -1,9 +1,3 @@
-import Anthropic from "@anthropic-ai/sdk";
-
-const client = new Anthropic({
-  apiKey: process.env.ANTHROPIC_API_KEY,
-});
-
 const SYS = `You are "The Ironclad Jurist", an elite Indian Legal AI for Tan, a law student in Hyderabad.
 
 RULES:
@@ -53,40 +47,82 @@ export default async function handler(req, res) {
     return res.status(405).json({ error: "Method not allowed" });
   }
 
-  if (!process.env.ANTHROPIC_API_KEY) {
-    return res.status(500).json({ error: "ANTHROPIC_API_KEY not configured" });
+  if (!process.env.GEMINI_API_KEY) {
+    return res.status(500).json({ error: "GEMINI_API_KEY not configured in Vercel" });
   }
 
   try {
-    const { messages, useSearch } = req.body;
+    const { messages } = req.body;
+
+    // Convert messages to Gemini format
+    const geminiMessages = messages.map(m => ({
+      role: m.role === 'assistant' ? 'model' : 'user',
+      parts: [{ text: m.content }]
+    }));
 
     res.setHeader("Content-Type", "text/event-stream");
     res.setHeader("Cache-Control", "no-cache, no-transform");
     res.setHeader("Connection", "keep-alive");
     res.setHeader("X-Accel-Buffering", "no");
 
-    const body = {
-      model: "claude-sonnet-4-20250514",
-      max_tokens: 3000,
-      system: SYS,
-      messages: messages,
-      stream: true,
-    };
+    const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-pro:streamGenerateContent?alt=sse&key=${process.env.GEMINI_API_KEY}`;
 
-    if (useSearch) {
-      body.tools = [{ type: "web_search_20250305", name: "web_search" }];
+    const response = await fetch(apiUrl, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        contents: geminiMessages,
+        systemInstruction: { parts: [{ text: SYS }] },
+        generationConfig: {
+          temperature: 0.7,
+          maxOutputTokens: 8000,
+        }
+      })
+    });
+
+    if (!response.ok) {
+      const error = await response.text();
+      throw new Error(`Gemini API error: ${error}`);
     }
 
-    const stream = await client.messages.create(body);
+    const reader = response.body.getReader();
+    const decoder = new TextDecoder();
 
-    for await (const event of stream) {
-      if (event.type === "content_block_delta" && event.delta?.type === "text_delta") {
-        res.write(`data: ${JSON.stringify(event)}\n\n`);
+    while (true) {
+      const { done, value } = await reader.read();
+      if (done) break;
+
+      const chunk = decoder.decode(value);
+      const lines = chunk.split('\n').filter(line => line.trim().startsWith('data:'));
+
+      for (const line of lines) {
+        const data = line.replace('data: ', '').trim();
+        if (!data || data === '[DONE]') continue;
+
+        try {
+          const parsed = JSON.parse(data);
+          const text = parsed.candidates?.[0]?.content?.parts?.[0]?.text;
+          
+          if (text) {
+            // Convert to Anthropic-like format for frontend compatibility
+            const event = {
+              type: "content_block_delta",
+              delta: {
+                type: "text_delta",
+                text: text
+              }
+            };
+            res.write(`data: ${JSON.stringify(event)}\n\n`);
+          }
+        } catch (e) {
+          // Skip parsing errors
+        }
       }
     }
 
     res.write("data: [DONE]\n\n");
     res.end();
+
   } catch (error) {
     console.error("Chat API error:", error);
     if (res.headersSent) {
