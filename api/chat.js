@@ -11,41 +11,21 @@ CONTEXT: NALSAR, OU Law, Symbiosis Hyd, ICFAI. Telangana HC. BNS/BNSS/BSA + IPC/
 FORMAT — use these headers on their own line:
 
 PROVISION
-Sections, Acts, old+new equivalents, Constitutional Articles.
-
 RATIO DECIDENDI
-Binding principle, reasoning, ratio vs obiter.
-
 INDIAN PRECEDENT
-SC/HC judgments: case name, year, citation, bench, holding.
-
 FOREIGN PRECEDENT
-2+ foreign cases from different jurisdictions.
-
 COMPARATIVE ANALYSIS
-Multi-jurisdiction comparison, evolution, policy.
-
 DEEP ANALYSIS
-Longest section. Policy, trends, academic commentary, reform, constitutional implications.
-
 PRACTICAL APPLICATION
-Moot arguments both sides, IRAC, project outlines.
-
-RECOMMENDED SOURCES
-Databases, journals, books.`;
+RECOMMENDED SOURCES`;
 
 export default async function handler(req, res) {
   res.setHeader("Access-Control-Allow-Origin", "*");
   res.setHeader("Access-Control-Allow-Methods", "POST, OPTIONS");
   res.setHeader("Access-Control-Allow-Headers", "Content-Type");
 
-  if (req.method === "OPTIONS") {
-    return res.status(200).end();
-  }
-
-  if (req.method !== "POST") {
-    return res.status(405).json({ error: "Method not allowed" });
-  }
+  if (req.method === "OPTIONS") return res.status(200).end();
+  if (req.method !== "POST") return res.status(405).json({ error: "Method not allowed" });
 
   if (!process.env.GEMINI_API_KEY) {
     return res.status(500).json({ error: "GEMINI_API_KEY not configured in Vercel" });
@@ -53,8 +33,6 @@ export default async function handler(req, res) {
 
   try {
     const { messages } = req.body;
-
-    // Convert messages to Gemini format
     const geminiMessages = messages.map(m => ({
       role: m.role === 'assistant' ? 'model' : 'user',
       parts: [{ text: m.content }]
@@ -65,7 +43,8 @@ export default async function handler(req, res) {
     res.setHeader("Connection", "keep-alive");
     res.setHeader("X-Accel-Buffering", "no");
 
-    const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-pro:streamGenerateContent?alt=sse&key=${process.env.GEMINI_API_KEY}`;
+    // UPDATED MODEL NAME BELOW
+    const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:streamGenerateContent?alt=sse&key=${process.env.GEMINI_API_KEY}`;
 
     const response = await fetch(apiUrl, {
       method: 'POST',
@@ -104,19 +83,13 @@ export default async function handler(req, res) {
           const text = parsed.candidates?.[0]?.content?.parts?.[0]?.text;
           
           if (text) {
-            // Convert to Anthropic-like format for frontend compatibility
             const event = {
               type: "content_block_delta",
-              delta: {
-                type: "text_delta",
-                text: text
-              }
+              delta: { type: "text_delta", text: text }
             };
             res.write(`data: ${JSON.stringify(event)}\n\n`);
           }
-        } catch (e) {
-          // Skip parsing errors
-        }
+        } catch (e) {}
       }
     }
 
@@ -124,7 +97,6 @@ export default async function handler(req, res) {
     res.end();
 
   } catch (error) {
-    console.error("Chat API error:", error);
     if (res.headersSent) {
       res.write(`data: ${JSON.stringify({ type: "error", error: error.message })}\n\n`);
       res.end();
