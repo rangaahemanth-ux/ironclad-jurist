@@ -16,19 +16,3 @@
     }
   ]
 }
-```
-
-Just removed the `functions` block — Vercel will auto-detect `api/chat.js` without it.
-
-**Also check:** Go to your GitHub repo and make sure `api/chat.js` is at the **root level**, not inside another folder like `ironclad-jurist/api/chat.js`. Your repo structure should look like:
-```
-your-repo/
-├── api/
-│   └── chat.js      ← must be here at root
-├── src/
-│   ├── App.jsx
-│   └── main.jsx
-├── index.html
-├── package.json
-├── vercel.json
-└── vite.config.js
