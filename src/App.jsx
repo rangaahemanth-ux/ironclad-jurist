@@ -152,19 +152,17 @@ function Msg({ msg, onPDF, onAction, isStreaming }) {
   );
 }
 
+/* ═══ 3D ROBO-DOG PUPPY ═══ */
 function Puppy({ name, cw }) {
   const [pos, setPos] = useState({ x: 60, y: 200 });
   const [toy, setToy] = useState({ x: 40, y: 350 });
   const [flip, setFlip] = useState(false);
   const [st, setSt] = useState("idle");
-  const [fr, setFr] = useState(0);
   const [care, setCare] = useState("");
   const [showC, setShowC] = useState(false);
   const [hearts, setHearts] = useState([]);
   const tgt = useRef({ x: 60, y: 300 });
   const tk = useRef(0);
-
-  useEffect(() => { const id = setInterval(() => setFr(f => f + 1), 60); return () => clearInterval(id); }, []);
 
   useEffect(() => {
     const pop = () => { setCare(PET_MSGS[Math.floor(Math.random() * PET_MSGS.length)]); setShowC(true); setTimeout(() => setShowC(false), 5000); };
@@ -210,36 +208,29 @@ function Puppy({ name, cw }) {
   useEffect(() => { if (hearts.length) { const t = setTimeout(() => setHearts(h => h.slice(1)), 1200); return () => clearTimeout(t); } }, [hearts]);
 
   const feed = () => setHearts(h => [...h, { id: Date.now(), x: Math.random() * 20 - 10 }]);
-  const wag = Math.sin(fr * .08) * (st === "playing" ? 30 : st === "chasing" ? 22 : 10);
-  const ear = Math.sin(fr * .1) * (st === "playing" ? 10 : 4);
-  const hp = st === "playing" || st === "chasing";
-  const bn = hp ? Math.abs(Math.sin(fr * .12)) * 4 : 0;
-  const lg = st === "chasing" ? Math.sin(fr * .15) * 3 : 0;
 
   return (<>
     <div style={{ position: "fixed", left: toy.x - 8, top: toy.y - 8, zIndex: 49, pointerEvents: "none", transition: "left 2s,top 2s" }}>
       <svg width="20" height="20" viewBox="0 0 30 30"><ellipse cx="15" cy="16" rx="7" ry="5" fill="#777" /><circle cx="15" cy="12" r="4.5" fill="#888" /><circle cx="12" cy="11" r=".8" fill="#222" /><circle cx="18" cy="11" r=".8" fill="#222" /><ellipse cx="15" cy="13" rx="1.2" ry=".8" fill="#E09090" /><circle cx="10" cy="8" r="2.5" fill="#999" /><circle cx="20" cy="8" r="2.5" fill="#999" /><path d="M22 15Q26 13 24 18" stroke="#777" strokeWidth="1.2" fill="none" /></svg>
     </div>
-    <div onClick={feed} style={{ position: "fixed", left: pos.x - 25, top: pos.y - 25, zIndex: 50, cursor: "pointer", transform: `scaleX(${flip ? -1 : 1}) translateY(${-bn}px)`, transition: "transform .08s" }} title={`Click ${name}!`}>
-      {hearts.map(h => <div key={h.id} style={{ position: "absolute", top: -12, left: `calc(50% + ${h.x}px)`, fontSize: 13, animation: "heartFloat 1.2s ease-out forwards", pointerEvents: "none" }}>💙</div>)}
-      <svg width="50" height="50" viewBox="0 0 80 80">
-        <ellipse cx="40" cy="48" rx="17" ry="11" fill="#F0E4D4" /><circle cx="40" cy="30" r="12" fill="#F5EDE0" />
-        <ellipse cx="30" cy="22" rx="5" ry="9" fill="#E0D0BC" transform={`rotate(${-16 + ear} 30 22)`} /><ellipse cx="50" cy="22" rx="5" ry="9" fill="#E0D0BC" transform={`rotate(${16 - ear} 50 22)`} />
-        {st === "sleeping" ? <><line x1="34" y1="28" x2="38" y2="28" stroke="#5A4A3A" strokeWidth="1.6" strokeLinecap="round" /><line x1="42" y1="28" x2="46" y2="28" stroke="#5A4A3A" strokeWidth="1.6" strokeLinecap="round" /></> :
-          hp ? <><path d="M34 28Q36 25 38 28" stroke="#5A4A3A" strokeWidth="1.4" fill="none" strokeLinecap="round" /><path d="M42 28Q44 25 46 28" stroke="#5A4A3A" strokeWidth="1.4" fill="none" strokeLinecap="round" /></> :
-            <><circle cx="36" cy="28" r="2" fill="#4A3A2A" /><circle cx="44" cy="28" r="2" fill="#4A3A2A" /><circle cx="36.7" cy="27.3" r=".6" fill="white" /><circle cx="44.7" cy="27.3" r=".6" fill="white" /></>}
-        <ellipse cx="40" cy="33" rx="2.3" ry="1.8" fill="#5A4A3A" />
-        {hp ? <><path d="M36 35Q40 40 44 35" stroke="#5A4A3A" strokeWidth=".9" fill="none" strokeLinecap="round" /><ellipse cx="40" cy="38" rx="1.8" ry="2.8" fill="#E89898" /></> :
-          st === "sleeping" ? <path d="M38 35Q40 36 42 35" stroke="#7A6A5A" strokeWidth=".7" fill="none" /> :
-            <path d="M37 35Q40 37 43 35" stroke="#6A5A4A" strokeWidth=".7" fill="none" />}
-        <rect x="28" y={55 + lg} width="5.5" height="10" rx="2.8" fill="#E8DCC8" /><rect x="34" y={55 - lg} width="5.5" height="10" rx="2.8" fill="#E8DCC8" />
-        <rect x="41" y={55 + lg} width="5.5" height="10" rx="2.8" fill="#E8DCC8" /><rect x="47" y={55 - lg} width="5.5" height="10" rx="2.8" fill="#E8DCC8" />
-        <path d={`M57 43Q${64 + wag} ${33} ${61 + wag} ${25}`} stroke="#E0D0BC" strokeWidth="3" fill="none" strokeLinecap="round" />
-        {st === "sleeping" && <text x="52" y={17 - Math.sin(fr * .03) * 3} fontSize="10" fill="#6AAAD4" opacity=".5">z z</text>}
-      </svg>
-      <div style={{ position: "absolute", bottom: -2, left: "50%", transform: `translateX(-50%) scaleX(${flip ? -1 : 1})`, background: "rgba(6,12,22,.85)", padding: "1px 7px", borderRadius: 6, border: "1px solid rgba(106,170,212,.1)", fontSize: 8, color: "#5A90B0", whiteSpace: "nowrap" }}>{name} {st === "chasing" ? "🏃" : st === "playing" ? "🎉" : st === "sleeping" ? "😴" : "🐾"}</div>
+    <div onClick={feed} style={{ position: "fixed", left: pos.x - 50, top: pos.y - 50, zIndex: 50, cursor: "pointer", transform: `scaleX(${flip ? -1 : 1})`, transition: "transform .08s" }} title={`Click ${name}!`}>
+      {hearts.map(h => <div key={h.id} style={{ position: "absolute", top: -12, left: `calc(50% + ${h.x}px)`, fontSize: 16, animation: "heartFloat 1.2s ease-out forwards", pointerEvents: "none" }}>💙</div>)}
+      <div dangerouslySetInnerHTML={{ __html: `
+        <model-viewer
+          src="/Robo-dog.glb"
+          auto-rotate
+          rotation-per-second="45deg"
+          camera-orbit="0deg 75deg 2m"
+          disable-zoom
+          disable-pan
+          disable-tap
+          interaction-prompt="none"
+          style="width:100px;height:100px;background:transparent;--poster-color:transparent;"
+        ></model-viewer>
+      `}} />
+      <div style={{ position: "absolute", bottom: -6, left: "50%", transform: `translateX(-50%) scaleX(${flip ? -1 : 1})`, background: "rgba(6,12,22,.9)", padding: "2px 8px", borderRadius: 6, border: "1px solid rgba(106,170,212,.15)", fontSize: 9, color: "#6AAAD4", whiteSpace: "nowrap", fontWeight: 600 }}>{name} {st === "chasing" ? "🏃" : st === "playing" ? "🎉" : st === "sleeping" ? "😴" : "🐾"}</div>
     </div>
-    {showC && <div style={{ position: "fixed", left: Math.max(10, Math.min(pos.x - 80, window.innerWidth - 210)), top: pos.y - 55, zIndex: 51, background: "linear-gradient(135deg,#1A3050,#142840)", border: "1px solid rgba(106,170,212,.15)", borderRadius: 12, padding: "8px 14px", maxWidth: 200, fontSize: 12, color: "#90C0E0", lineHeight: 1.5, textAlign: "center", animation: "msgUp .3s ease both", boxShadow: "0 6px 20px rgba(0,0,0,.4)", pointerEvents: "none" }}>{care}</div>}
+    {showC && <div style={{ position: "fixed", left: Math.max(10, Math.min(pos.x - 80, window.innerWidth - 210)), top: pos.y - 65, zIndex: 51, background: "linear-gradient(135deg,#1A3050,#142840)", border: "1px solid rgba(106,170,212,.15)", borderRadius: 12, padding: "8px 14px", maxWidth: 200, fontSize: 12, color: "#90C0E0", lineHeight: 1.5, textAlign: "center", animation: "msgUp .3s ease both", boxShadow: "0 6px 20px rgba(0,0,0,.4)", pointerEvents: "none" }}>{care}</div>}
   </>);
 }
 
@@ -291,12 +282,24 @@ function Naming({ onName }) {
     <style>{`@import url('https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;0,500;0,600;0,700;1,400&family=Lora:wght@0,400;0,500;0,600&display=swap');@keyframes bob{0%,100%{transform:translateY(0)}50%{transform:translateY(-6px)}}@keyframes fadeUp{from{opacity:0;transform:translateY(16px)}to{opacity:1;transform:translateY(0)}}`}</style>
     <div style={{ textAlign: "center", animation: "fadeUp .7s ease both", maxWidth: 380, padding: "0 24px" }}>
       <div style={{ animation: "bob 3s ease-in-out infinite", marginBottom: 16 }}>
-        <svg width="90" height="90" viewBox="0 0 80 80"><ellipse cx="40" cy="48" rx="18" ry="12" fill="#F0E4D4" /><circle cx="40" cy="30" r="12" fill="#F5EDE0" /><ellipse cx="30" cy="22" rx="5" ry="9" fill="#E0D0BC" transform="rotate(-10 30 22)" /><ellipse cx="50" cy="22" rx="5" ry="9" fill="#E0D0BC" transform="rotate(10 50 22)" /><path d="M34 28Q36 25 38 28" stroke="#5A4A3A" strokeWidth="1.4" fill="none" strokeLinecap="round" /><path d="M42 28Q44 25 46 28" stroke="#5A4A3A" strokeWidth="1.4" fill="none" strokeLinecap="round" /><ellipse cx="40" cy="33" rx="2.3" ry="1.8" fill="#5A4A3A" /><path d="M36 35Q40 40 44 35" stroke="#5A4A3A" strokeWidth=".9" fill="none" strokeLinecap="round" /><ellipse cx="40" cy="38" rx="1.8" ry="2.8" fill="#E89898" /><path d="M57 43Q67 33 64 25" stroke="#E0D0BC" strokeWidth="3" fill="none" strokeLinecap="round" /></svg>
+        <div dangerouslySetInnerHTML={{ __html: `
+          <model-viewer
+            src="/Robo-dog.glb"
+            auto-rotate
+            rotation-per-second="30deg"
+            camera-orbit="0deg 75deg 2.5m"
+            disable-zoom
+            disable-pan
+            disable-tap
+            interaction-prompt="none"
+            style="width:150px;height:150px;margin:0 auto;background:transparent;--poster-color:transparent;"
+          ></model-viewer>
+        `}} />
       </div>
       <h1 style={{ fontSize: 28, fontWeight: 300, color: "#A8CCE8", margin: "0 0 6px" }}>Ironclad Jurist</h1>
       <p style={{ fontSize: 14, color: "#4A7090", margin: "0 0 6px" }}>Your legal AI, Tan</p>
-      <p style={{ fontSize: 13, color: "#2E5070", margin: "0 0 20px" }}>Name your study buddy first!</p>
-      <input value={n} onChange={e => setN(e.target.value)} onKeyDown={e => { if (e.key === "Enter" && n.trim()) onName(n.trim()); }} placeholder="Name your puppy..." autoFocus
+      <p style={{ fontSize: 13, color: "#2E5070", margin: "0 0 20px" }}>Name your robo-dog first!</p>
+      <input value={n} onChange={e => setN(e.target.value)} onKeyDown={e => { if (e.key === "Enter" && n.trim()) onName(n.trim()); }} placeholder="Name your robo-dog..." autoFocus
         style={{ width: "100%", padding: "14px 20px", borderRadius: 14, border: "1px solid rgba(106,170,212,.12)", background: "rgba(106,170,212,.04)", color: "#B8D0E8", fontSize: 16, textAlign: "center", outline: "none", boxSizing: "border-box" }} />
       <button onClick={() => { if (n.trim()) onName(n.trim()); }} disabled={!n.trim()} style={{ marginTop: 12, padding: "12px 36px", borderRadius: 18, border: "none", cursor: n.trim() ? "pointer" : "default", background: n.trim() ? "linear-gradient(135deg,#1A3A5A,#2A5070)" : "rgba(106,170,212,.08)", color: n.trim() ? "#C8E0F8" : "#2A4A6A", fontSize: 15 }}>Start</button>
     </div>
