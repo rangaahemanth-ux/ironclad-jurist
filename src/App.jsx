@@ -154,16 +154,16 @@ function Msg({ msg, onPDF, onAction, isStreaming }) {
 
 /* ═══ 3D ROBO-DOG PUPPY ═══ */
 function Puppy({ name, cw }) {
-  const [pos, setPos] = useState({ x: 60, y: 200 });
-  const [toy, setToy] = useState({ x: 40, y: 350 });
+  const [posX, setPosX] = useState(200);
+  const [st, setSt] = useState("walking"); // walking, sitting, sleeping
   const [flip, setFlip] = useState(false);
-  const [st, setSt] = useState("idle");
   const [care, setCare] = useState("");
   const [showC, setShowC] = useState(false);
   const [hearts, setHearts] = useState([]);
-  const tgt = useRef({ x: 60, y: 300 });
-  const tk = useRef(0);
+  const tgtX = useRef(400);
+  const stTimer = useRef(null);
 
+  // Care messages
   useEffect(() => {
     const pop = () => { setCare(PET_MSGS[Math.floor(Math.random() * PET_MSGS.length)]); setShowC(true); setTimeout(() => setShowC(false), 5000); };
     const t = setTimeout(pop, 15000);
@@ -171,66 +171,102 @@ function Puppy({ name, cw }) {
     return () => { clearTimeout(t); clearInterval(iv); };
   }, []);
 
+  // State cycle: walk → sit → walk → sleep → walk...
   useEffect(() => {
-    const iv = setInterval(() => {
-      setToy({ x: Math.random() > .5 ? cw - 60 - Math.random() * 50 : 20 + Math.random() * 50, y: 100 + Math.random() * 350 });
-    }, 5000 + Math.random() * 3000);
-    return () => clearInterval(iv);
+    const cycle = () => {
+      setSt(prev => {
+        if (prev === "walking") {
+          // After walking, sit for 4-8 seconds
+          stTimer.current = setTimeout(cycle, 4000 + Math.random() * 4000);
+          return Math.random() > 0.3 ? "sitting" : "sleeping";
+        } else {
+          // After sitting/sleeping, pick new target and walk for 5-10 seconds
+          tgtX.current = 100 + Math.random() * (cw - 300);
+          stTimer.current = setTimeout(cycle, 5000 + Math.random() * 5000);
+          return "walking";
+        }
+      });
+    };
+    stTimer.current = setTimeout(cycle, 3000 + Math.random() * 3000);
+    return () => { if (stTimer.current) clearTimeout(stTimer.current); };
   }, [cw]);
 
+  // Walking movement
   useEffect(() => {
+    if (st !== "walking") return;
     let id;
     const tick = () => {
-      tk.current++;
-      setPos(p => {
-        const dx = toy.x - p.x, dy = toy.y - p.y, d = Math.sqrt(dx * dx + dy * dy);
-        let nx = p.x, ny = p.y, ns = st;
-        if (d < 20) { ns = "playing"; nx += Math.sin(tk.current * .1) * 1.2; ny += Math.cos(tk.current * .1) * 1.2; }
-        else if (d < 300) { ns = "chasing"; const sp = .6 + Math.sin(tk.current * .04) * .2; nx += (dx / d) * sp; ny += (dy / d) * sp; if (dx > 0) setFlip(false); else setFlip(true); }
-        else {
-          if (tk.current % 180 === 0) tgt.current = { x: Math.random() > .5 ? 20 + Math.random() * 70 : cw - 80 + Math.random() * 40, y: 100 + Math.random() * 350 };
-          const tx = tgt.current.x - p.x, ty = tgt.current.y - p.y, td = Math.sqrt(tx * tx + ty * ty);
-          if (td > 5) { nx += (tx / td) * .4; ny += (ty / td) * .4; if (tx > 0) setFlip(false); else setFlip(true); ns = "idle"; }
-          else ns = tk.current % 500 > 430 ? "sleeping" : "idle";
-        }
-        ny = Math.max(80, Math.min(520, ny));
-        const mid = cw / 2;
-        if (nx > 110 && nx < cw - 110) nx = nx < mid ? 100 : cw - 100;
-        if (ns !== st) setSt(ns);
-        return { x: nx, y: ny };
+      setPosX(prev => {
+        const dx = tgtX.current - prev;
+        if (Math.abs(dx) < 2) return prev;
+        const speed = 0.8;
+        if (dx > 0) setFlip(false); else setFlip(true);
+        return prev + (dx > 0 ? speed : -speed);
       });
       id = requestAnimationFrame(tick);
     };
     id = requestAnimationFrame(tick);
     return () => cancelAnimationFrame(id);
-  }, [st, toy, cw]);
+  }, [st]);
 
   useEffect(() => { if (hearts.length) { const t = setTimeout(() => setHearts(h => h.slice(1)), 1200); return () => clearTimeout(t); } }, [hearts]);
 
-  const feed = () => setHearts(h => [...h, { id: Date.now(), x: Math.random() * 20 - 10 }]);
+  const feed = () => setHearts(h => [...h, { id: Date.now(), x: Math.random() * 30 - 15 }]);
+
+  const bobY = st === "walking" ? Math.sin(Date.now() * 0.005) * 3 : 0;
 
   return (<>
-    <div style={{ position: "fixed", left: toy.x - 8, top: toy.y - 8, zIndex: 49, pointerEvents: "none", transition: "left 2s,top 2s" }}>
-      <svg width="20" height="20" viewBox="0 0 30 30"><ellipse cx="15" cy="16" rx="7" ry="5" fill="#777" /><circle cx="15" cy="12" r="4.5" fill="#888" /><circle cx="12" cy="11" r=".8" fill="#222" /><circle cx="18" cy="11" r=".8" fill="#222" /><ellipse cx="15" cy="13" rx="1.2" ry=".8" fill="#E09090" /><circle cx="10" cy="8" r="2.5" fill="#999" /><circle cx="20" cy="8" r="2.5" fill="#999" /><path d="M22 15Q26 13 24 18" stroke="#777" strokeWidth="1.2" fill="none" /></svg>
-    </div>
-    <div onClick={feed} style={{ position: "fixed", left: pos.x - 50, top: pos.y - 50, zIndex: 50, cursor: "pointer", transform: `scaleX(${flip ? -1 : 1})`, transition: "transform .08s" }} title={`Click ${name}!`}>
-      {hearts.map(h => <div key={h.id} style={{ position: "absolute", top: -12, left: `calc(50% + ${h.x}px)`, fontSize: 16, animation: "heartFloat 1.2s ease-out forwards", pointerEvents: "none" }}>💙</div>)}
+    <div onClick={feed} style={{
+      position: "fixed",
+      left: posX - 60,
+      bottom: 10,
+      zIndex: 50,
+      cursor: "pointer",
+      transform: `scaleX(${flip ? -1 : 1}) translateY(${bobY}px)`,
+      transition: "left 0.3s linear, transform 0.15s",
+    }} title={`Click ${name}!`}>
+      {hearts.map(h => <div key={h.id} style={{ position: "absolute", top: -20, left: `calc(50% + ${h.x}px)`, fontSize: 16, animation: "heartFloat 1.2s ease-out forwards", pointerEvents: "none" }}>💙</div>)}
       <div dangerouslySetInnerHTML={{ __html: `
         <model-viewer
           src="/Robo-dog.glb"
-          auto-rotate
-          rotation-per-second="45deg"
+          ${st === "walking" ? 'auto-rotate rotation-per-second="20deg"' : ''}
           camera-orbit="0deg 75deg 2m"
           disable-zoom
           disable-pan
           disable-tap
           interaction-prompt="none"
-          style="width:100px;height:100px;background:transparent;--poster-color:transparent;"
+          style="width:120px;height:120px;background:transparent;--poster-color:transparent;"
         ></model-viewer>
       `}} />
-      <div style={{ position: "absolute", bottom: -6, left: "50%", transform: `translateX(-50%) scaleX(${flip ? -1 : 1})`, background: "rgba(6,12,22,.9)", padding: "2px 8px", borderRadius: 6, border: "1px solid rgba(106,170,212,.15)", fontSize: 9, color: "#6AAAD4", whiteSpace: "nowrap", fontWeight: 600 }}>{name} {st === "chasing" ? "🏃" : st === "playing" ? "🎉" : st === "sleeping" ? "😴" : "🐾"}</div>
+      {/* Status indicator */}
+      <div style={{
+        position: "absolute", bottom: -4, left: "50%",
+        transform: `translateX(-50%) scaleX(${flip ? -1 : 1})`,
+        background: "rgba(6,12,22,.9)", padding: "2px 10px", borderRadius: 8,
+        border: "1px solid rgba(106,170,212,.15)", fontSize: 10, color: "#6AAAD4",
+        whiteSpace: "nowrap", fontWeight: 600, display: "flex", alignItems: "center", gap: 4
+      }}>
+        {name}
+        <span>{st === "walking" ? "🚶" : st === "sitting" ? "🐕" : "😴"}</span>
+      </div>
+      {/* Shadow */}
+      <div style={{
+        position: "absolute", bottom: -2, left: "50%", transform: "translateX(-50%)",
+        width: 80, height: 8, borderRadius: "50%",
+        background: "radial-gradient(ellipse, rgba(106,170,212,.1) 0%, transparent 70%)"
+      }}/>
     </div>
-    {showC && <div style={{ position: "fixed", left: Math.max(10, Math.min(pos.x - 80, window.innerWidth - 210)), top: pos.y - 65, zIndex: 51, background: "linear-gradient(135deg,#1A3050,#142840)", border: "1px solid rgba(106,170,212,.15)", borderRadius: 12, padding: "8px 14px", maxWidth: 200, fontSize: 12, color: "#90C0E0", lineHeight: 1.5, textAlign: "center", animation: "msgUp .3s ease both", boxShadow: "0 6px 20px rgba(0,0,0,.4)", pointerEvents: "none" }}>{care}</div>}
+
+    {/* Care message bubble */}
+    {showC && <div style={{
+      position: "fixed", left: Math.max(10, Math.min(posX - 80, window.innerWidth - 210)),
+      bottom: 140, zIndex: 51,
+      background: "linear-gradient(135deg,#1A3050,#142840)",
+      border: "1px solid rgba(106,170,212,.15)", borderRadius: 12,
+      padding: "8px 14px", maxWidth: 200, fontSize: 12, color: "#90C0E0",
+      lineHeight: 1.5, textAlign: "center", animation: "msgUp .3s ease both",
+      boxShadow: "0 6px 20px rgba(0,0,0,.4)", pointerEvents: "none"
+    }}>{care}</div>}
   </>);
 }
 
@@ -278,9 +314,109 @@ function Quiz({ onClose }) {
 
 function Naming({ onName }) {
   const [n, setN] = useState("");
-  return (<div style={{ position: "fixed", inset: 0, zIndex: 2000, display: "flex", alignItems: "center", justifyContent: "center", background: "linear-gradient(165deg,#040810,#081018,#0A1420)" }}>
-    <style>{`@import url('https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;0,500;0,600;0,700;1,400&family=Lora:wght@0,400;0,500;0,600&display=swap');@keyframes bob{0%,100%{transform:translateY(0)}50%{transform:translateY(-6px)}}@keyframes fadeUp{from{opacity:0;transform:translateY(16px)}to{opacity:1;transform:translateY(0)}}`}</style>
-    <div style={{ textAlign: "center", animation: "fadeUp .7s ease both", maxWidth: 380, padding: "0 24px" }}>
+  const [flowers, setFlowers] = useState([]);
+  const [mousePos, setMousePos] = useState({ x: 0, y: 0 });
+  const flowerIdRef = useRef(0);
+
+  useEffect(() => {
+    let lastSpawn = 0;
+    const handleMove = (e) => {
+      setMousePos({ x: e.clientX, y: e.clientY });
+      const now = Date.now();
+      if (now - lastSpawn < 80) return;
+      lastSpawn = now;
+      flowerIdRef.current++;
+      const id = flowerIdRef.current;
+      const size = 20 + Math.random() * 30;
+      const rotation = Math.random() * 360;
+      const drift = (Math.random() - 0.5) * 60;
+      const lilyType = Math.floor(Math.random() * 3);
+      setFlowers(prev => [...prev.slice(-25), { id, x: e.clientX, y: e.clientY, size, rotation, drift, lilyType }]);
+      setTimeout(() => setFlowers(prev => prev.filter(f => f.id !== id)), 2000);
+    };
+    window.addEventListener("mousemove", handleMove);
+    return () => window.removeEventListener("mousemove", handleMove);
+  }, []);
+
+  const LilySVG = ({ size, rotation, lilyType }) => {
+    if (lilyType === 0) return (
+      <svg width={size} height={size} viewBox="0 0 60 60" style={{ transform: `rotate(${rotation}deg)` }}>
+        <defs><radialGradient id="lg1"><stop offset="0%" stopColor="#6AAAD4" stopOpacity=".7"/><stop offset="100%" stopColor="#2A5070" stopOpacity=".1"/></radialGradient></defs>
+        {[0,60,120,180,240,300].map(a => <ellipse key={a} cx="30" cy="30" rx="6" ry="16" fill="url(#lg1)" transform={`rotate(${a} 30 30)`}/>)}
+        <circle cx="30" cy="30" r="4" fill="#A8CCE8" opacity=".6"/>
+        <circle cx="30" cy="30" r="2" fill="#C8E0F0" opacity=".8"/>
+      </svg>
+    );
+    if (lilyType === 1) return (
+      <svg width={size} height={size} viewBox="0 0 60 60" style={{ transform: `rotate(${rotation}deg)` }}>
+        <defs><radialGradient id="lg2"><stop offset="0%" stopColor="#90C0E0" stopOpacity=".6"/><stop offset="100%" stopColor="#1A3A5A" stopOpacity=".05"/></radialGradient></defs>
+        {[0,72,144,216,288].map(a => <ellipse key={a} cx="30" cy="30" rx="5" ry="14" fill="url(#lg2)" transform={`rotate(${a} 30 30)`}/>)}
+        {[36,108,180,252,324].map(a => <ellipse key={a} cx="30" cy="30" rx="4" ry="10" fill="url(#lg2)" opacity=".5" transform={`rotate(${a} 30 30)`}/>)}
+        <circle cx="30" cy="30" r="3.5" fill="#6AAAD4" opacity=".5"/>
+        {[0,120,240].map(a => <circle key={a} cx={30 + Math.cos(a*Math.PI/180)*2} cy={30 + Math.sin(a*Math.PI/180)*2} r="1" fill="#C8E0F0" opacity=".7"/>)}
+      </svg>
+    );
+    return (
+      <svg width={size} height={size} viewBox="0 0 60 60" style={{ transform: `rotate(${rotation}deg)` }}>
+        <defs><radialGradient id="lg3"><stop offset="0%" stopColor="#5A9CD0" stopOpacity=".5"/><stop offset="100%" stopColor="#0E2A40" stopOpacity=".05"/></radialGradient></defs>
+        {[0,45,90,135,180,225,270,315].map(a => <path key={a} d={`M30 30 Q${30+Math.cos((a-20)*Math.PI/180)*14} ${30+Math.sin((a-20)*Math.PI/180)*14} ${30+Math.cos(a*Math.PI/180)*18} ${30+Math.sin(a*Math.PI/180)*18} Q${30+Math.cos((a+20)*Math.PI/180)*14} ${30+Math.sin((a+20)*Math.PI/180)*14} 30 30`} fill="url(#lg3)"/>)}
+        <circle cx="30" cy="30" r="5" fill="#1A3A5A" opacity=".4"/>
+        <circle cx="30" cy="30" r="3" fill="#6AAAD4" opacity=".5"/>
+        <circle cx="30" cy="30" r="1.5" fill="#A8CCE8" opacity=".7"/>
+      </svg>
+    );
+  };
+
+  return (<div style={{ position: "fixed", inset: 0, zIndex: 2000, display: "flex", alignItems: "center", justifyContent: "center", background: "linear-gradient(165deg,#040810,#081018,#0A1420)", cursor: "none", overflow: "hidden" }}>
+    <style>{`
+      @import url('https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;0,500;0,600;0,700;1,400&family=Lora:wght@0,400;0,500;0,600&display=swap');
+      @keyframes bob{0%,100%{transform:translateY(0)}50%{transform:translateY(-6px)}}
+      @keyframes fadeUp{from{opacity:0;transform:translateY(16px)}to{opacity:1;transform:translateY(0)}}
+      @keyframes lilyFade{0%{opacity:1;transform:translate(0,0) scale(1) rotate(0deg)}100%{opacity:0;transform:translate(var(--dx),40px) scale(0.3) rotate(90deg)}}
+      @keyframes giantLilyPulse{0%,100%{transform:translate(-50%,-50%) scale(1);opacity:.7}50%{transform:translate(-50%,-50%) scale(1.1);opacity:.9}}
+    `}</style>
+
+    {/* Giant cursor lily */}
+    <div style={{ position: "fixed", left: mousePos.x, top: mousePos.y, zIndex: 2002, pointerEvents: "none", transform: "translate(-50%,-50%)", animation: "giantLilyPulse 2s ease-in-out infinite" }}>
+      <svg width="60" height="60" viewBox="0 0 60 60">
+        <defs>
+          <radialGradient id="cursorLily">
+            <stop offset="0%" stopColor="#A8CCE8" stopOpacity=".9"/>
+            <stop offset="60%" stopColor="#6AAAD4" stopOpacity=".6"/>
+            <stop offset="100%" stopColor="#2A5070" stopOpacity=".1"/>
+          </radialGradient>
+          <filter id="glow"><feGaussianBlur stdDeviation="2" result="blur"/><feMerge><feMergeNode in="blur"/><feMergeNode in="SourceGraphic"/></feMerge></filter>
+        </defs>
+        <g filter="url(#glow)">
+          {[0,60,120,180,240,300].map(a => <ellipse key={a} cx="30" cy="30" rx="7" ry="18" fill="url(#cursorLily)" transform={`rotate(${a} 30 30)`}/>)}
+          <circle cx="30" cy="30" r="5" fill="#C8E0F0" opacity=".8"/>
+          <circle cx="30" cy="30" r="3" fill="#E0F0FF" opacity=".9"/>
+          {[0,60,120,180,240,300].map(a => <circle key={a} cx={30+Math.cos(a*Math.PI/180)*3} cy={30+Math.sin(a*Math.PI/180)*3} r=".8" fill="#F0F8FF" opacity=".8"/>)}
+        </g>
+      </svg>
+    </div>
+
+    {/* Cursor glow ring */}
+    <div style={{ position: "fixed", left: mousePos.x, top: mousePos.y, zIndex: 2001, pointerEvents: "none", transform: "translate(-50%,-50%)", width: 90, height: 90, borderRadius: "50%", background: "radial-gradient(circle, rgba(106,170,212,.12) 0%, transparent 70%)", transition: "left .05s, top .05s" }}/>
+
+    {/* Trail flowers */}
+    {flowers.map(f => (
+      <div key={f.id} style={{ position: "fixed", left: f.x, top: f.y, zIndex: 2001, pointerEvents: "none", transform: "translate(-50%,-50%)", "--dx": `${f.drift}px`, animation: "lilyFade 2s ease-out forwards" }}>
+        <LilySVG size={f.size} rotation={f.rotation} lilyType={f.lilyType} />
+      </div>
+    ))}
+
+    {/* Floating ambient lilies */}
+    {[...Array(8)].map((_, i) => (
+      <div key={`ambient-${i}`} style={{ position: "fixed", left: `${10 + (i * 12) % 90}%`, top: `${5 + (i * 17) % 85}%`, zIndex: 1999, pointerEvents: "none", opacity: .08 + (i % 3) * .04, animation: `bob ${3 + i * .5}s ease-in-out ${i * .3}s infinite`, transform: `rotate(${i * 45}deg) scale(${.6 + (i % 4) * .2})` }}>
+        <svg width="50" height="50" viewBox="0 0 60 60">
+          {[0,60,120,180,240,300].map(a => <ellipse key={a} cx="30" cy="30" rx="6" ry="16" fill="#6AAAD4" opacity=".3" transform={`rotate(${a} 30 30)`}/>)}
+          <circle cx="30" cy="30" r="4" fill="#90C0E0" opacity=".2"/>
+        </svg>
+      </div>
+    ))}
+
+    <div style={{ textAlign: "center", animation: "fadeUp .7s ease both", maxWidth: 380, padding: "0 24px", position: "relative", zIndex: 2000 }}>
       <div style={{ animation: "bob 3s ease-in-out infinite", marginBottom: 16 }}>
         <div dangerouslySetInnerHTML={{ __html: `
           <model-viewer
@@ -300,8 +436,8 @@ function Naming({ onName }) {
       <p style={{ fontSize: 14, color: "#4A7090", margin: "0 0 6px" }}>Your legal AI, Tan</p>
       <p style={{ fontSize: 13, color: "#2E5070", margin: "0 0 20px" }}>Name your robo-dog first!</p>
       <input value={n} onChange={e => setN(e.target.value)} onKeyDown={e => { if (e.key === "Enter" && n.trim()) onName(n.trim()); }} placeholder="Name your robo-dog..." autoFocus
-        style={{ width: "100%", padding: "14px 20px", borderRadius: 14, border: "1px solid rgba(106,170,212,.12)", background: "rgba(106,170,212,.04)", color: "#B8D0E8", fontSize: 16, textAlign: "center", outline: "none", boxSizing: "border-box" }} />
-      <button onClick={() => { if (n.trim()) onName(n.trim()); }} disabled={!n.trim()} style={{ marginTop: 12, padding: "12px 36px", borderRadius: 18, border: "none", cursor: n.trim() ? "pointer" : "default", background: n.trim() ? "linear-gradient(135deg,#1A3A5A,#2A5070)" : "rgba(106,170,212,.08)", color: n.trim() ? "#C8E0F8" : "#2A4A6A", fontSize: 15 }}>Start</button>
+        style={{ width: "100%", padding: "14px 20px", borderRadius: 14, border: "1px solid rgba(106,170,212,.12)", background: "rgba(106,170,212,.04)", color: "#B8D0E8", fontSize: 16, textAlign: "center", outline: "none", boxSizing: "border-box", cursor: "none" }} />
+      <button onClick={() => { if (n.trim()) onName(n.trim()); }} disabled={!n.trim()} style={{ marginTop: 12, padding: "12px 36px", borderRadius: 18, border: "none", cursor: n.trim() ? "none" : "default", background: n.trim() ? "linear-gradient(135deg,#1A3A5A,#2A5070)" : "rgba(106,170,212,.08)", color: n.trim() ? "#C8E0F8" : "#2A4A6A", fontSize: 15 }}>Start</button>
     </div>
   </div>);
 }
