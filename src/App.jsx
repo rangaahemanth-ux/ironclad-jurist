@@ -202,12 +202,15 @@ function RoboDog({ name, cw }) {
     const tick = () => {
       setPosX(prev => {
         const dx = tgtX.current - prev;
-        if (Math.abs(dx) < 2) return prev;
-        const speed = 1.2;
+        if (Math.abs(dx) < 5) {
+          setState("sitting");
+          return prev;
+        }
+        const speed = 0.4;
         if (dx > 0) setFlip(false); else setFlip(true);
         return prev + (dx > 0 ? speed : -speed);
       });
-      setWalkCycle(c => (c + 0.3) % (Math.PI * 2));
+      setWalkCycle(c => (c + 0.15) % (Math.PI * 2));
       id = requestAnimationFrame(tick);
     };
     id = requestAnimationFrame(tick);
@@ -236,14 +239,9 @@ function RoboDog({ name, cw }) {
     setHearts(h => [...h, { id: Date.now(), x: Math.random() * 30 - 15 }]);
   };
 
-  // Walking bob
   const bodyBob = state === "walking" ? Math.sin(walkCycle * 2) * 2 : 0;
-  
-  // Leg positions for walking
   const frontLegAngle = state === "walking" ? Math.sin(walkCycle) * 25 : 0;
   const backLegAngle = state === "walking" ? Math.sin(walkCycle + Math.PI) * 25 : 0;
-  
-  // Tail wag
   const tailAngle = Math.sin(Date.now() * 0.005 * wagSpeed) * (state === "sleeping" ? 5 : 20);
 
   return (<>
@@ -270,98 +268,53 @@ function RoboDog({ name, cw }) {
           </linearGradient>
         </defs>
 
-        {/* Shadow */}
         <ellipse cx="60" cy="82" rx="35" ry="6" fill="rgba(106,170,212,0.15)" />
 
         {state === "sleeping" ? (
-          /* Sleeping pose - curled up */
           <g transform="translate(0, 10)">
-            {/* Body - oval curled */}
             <ellipse cx="60" cy="55" rx="28" ry="20" fill="url(#bodyGrad)" transform="rotate(-15 60 55)" />
-            
-            {/* Head tucked in */}
             <circle cx="50" cy="48" r="14" fill="url(#headGrad)" />
-            
-            {/* Closed eyes */}
             <path d="M 46 47 Q 48 49 50 47" stroke="#2A4A6A" strokeWidth="2" fill="none" strokeLinecap="round" />
             <path d="M 52 47 Q 54 49 56 47" stroke="#2A4A6A" strokeWidth="2" fill="none" strokeLinecap="round" />
-            
-            {/* Ears down */}
             <ellipse cx="44" cy="42" rx="4" ry="7" fill="#4A8AB4" transform="rotate(-30 44 42)" />
             <ellipse cx="56" cy="42" rx="4" ry="7" fill="#4A8AB4" transform="rotate(30 56 42)" />
-            
-            {/* Legs tucked */}
             <rect x="55" y="60" width="6" height="8" rx="3" fill="#3A7CB0" />
             <rect x="65" y="62" width="6" height="8" rx="3" fill="#3A7CB0" />
-            
-            {/* Tail curled around */}
             <path d="M 80 55 Q 75 45 65 48" stroke="#4A8AB4" strokeWidth="5" fill="none" strokeLinecap="round" transform={`rotate(${tailAngle * 0.3} 80 55)`} />
-            
-            {/* Zzz */}
             <text x="75" y="35" fontSize="10" fill="#6AAAD4" opacity="0.6" fontFamily="Arial">Z</text>
             <text x="82" y="28" fontSize="8" fill="#6AAAD4" opacity="0.5" fontFamily="Arial">z</text>
             <text x="88" y="23" fontSize="6" fill="#6AAAD4" opacity="0.4" fontFamily="Arial">z</text>
           </g>
         ) : state === "sitting" ? (
-          /* Sitting pose */
           <g transform={`translate(0, ${bodyBob})`}>
-            {/* Body - more upright */}
             <ellipse cx="60" cy="50" rx="18" ry="22" fill="url(#bodyGrad)" />
-            
-            {/* Head */}
             <circle cx="60" cy="35" r="15" fill="url(#headGrad)" />
-            
-            {/* Eyes */}
             <circle cx="55" cy="33" r="3" fill="#2A4A6A" />
             <circle cx="65" cy="33" r="3" fill="#2A4A6A" />
             <circle cx="56" cy="32" r="1.5" fill="#C8E0F0" />
             <circle cx="66" cy="32" r="1.5" fill="#C8E0F0" />
-            
-            {/* Nose */}
             <circle cx="60" cy="40" r="2.5" fill="#2A4A6A" />
-            
-            {/* Ears - perked up */}
             <ellipse cx="52" cy="25" rx="4" ry="8" fill="#4A8AB4" transform="rotate(-25 52 25)" />
             <ellipse cx="68" cy="25" rx="4" ry="8" fill="#4A8AB4" transform="rotate(25 68 25)" />
-            
-            {/* Front legs - sitting */}
             <rect x="52" y="60" width="6" height="15" rx="3" fill="#3A7CB0" />
             <rect x="62" y="60" width="6" height="15" rx="3" fill="#3A7CB0" />
-            
-            {/* Back legs - folded */}
             <ellipse cx="48" cy="68" rx="8" ry="6" fill="#3A7CB0" />
             <ellipse cx="72" cy="68" rx="8" ry="6" fill="#3A7CB0" />
-            
-            {/* Tail - wagging */}
             <path d="M 75 50 Q 85 45 90 50" stroke="#4A8AB4" strokeWidth="5" fill="none" strokeLinecap="round" transform={`rotate(${tailAngle} 75 50)`} />
-            
-            {/* Antenna */}
             <line x1="60" y1="22" x2="60" y2="15" stroke="#6AAAD4" strokeWidth="2" />
             <circle cx="60" cy="15" r="3" fill="#90C0E0" />
           </g>
         ) : (
-          /* Walking pose */
           <g transform={`translate(0, ${bodyBob})`}>
-            {/* Body */}
             <ellipse cx="60" cy="48" rx="20" ry="16" fill="url(#bodyGrad)" />
-            
-            {/* Head */}
             <circle cx="75" cy="42" r="14" fill="url(#headGrad)" />
-            
-            {/* Eyes */}
             <circle cx="72" cy="40" r="3" fill="#2A4A6A" />
             <circle cx="80" cy="40" r="3" fill="#2A4A6A" />
             <circle cx="73" cy="39" r="1.5" fill="#C8E0F0" />
             <circle cx="81" cy="39" r="1.5" fill="#C8E0F0" />
-            
-            {/* Nose */}
             <circle cx="78" cy="46" r="2.5" fill="#2A4A6A" />
-            
-            {/* Ears */}
             <ellipse cx="70" cy="32" rx="4" ry="8" fill="#4A8AB4" transform="rotate(-20 70 32)" />
             <ellipse cx="82" cy="32" rx="4" ry="8" fill="#4A8AB4" transform="rotate(20 82 32)" />
-            
-            {/* Front legs - animated */}
             <g transform={`rotate(${frontLegAngle} 54 60)`}>
               <rect x="51" y="60" width="6" height="18" rx="3" fill="#3A7CB0" />
               <ellipse cx="54" cy="78" rx="4" ry="3" fill="#2A5A8A" />
@@ -370,8 +323,6 @@ function RoboDog({ name, cw }) {
               <rect x="63" y="60" width="6" height="18" rx="3" fill="#3A7CB0" />
               <ellipse cx="66" cy="78" rx="4" ry="3" fill="#2A5A8A" />
             </g>
-            
-            {/* Back legs - animated */}
             <g transform={`rotate(${backLegAngle} 46 60)`}>
               <rect x="43" y="60" width="6" height="18" rx="3" fill="#3A7CB0" />
               <ellipse cx="46" cy="78" rx="4" ry="3" fill="#2A5A8A" />
@@ -380,11 +331,7 @@ function RoboDog({ name, cw }) {
               <rect x="71" y="60" width="6" height="18" rx="3" fill="#3A7CB0" />
               <ellipse cx="74" cy="78" rx="4" ry="3" fill="#2A5A8A" />
             </g>
-            
-            {/* Tail - wagging fast */}
             <path d="M 45 45 Q 35 40 30 45" stroke="#4A8AB4" strokeWidth="5" fill="none" strokeLinecap="round" transform={`rotate(${tailAngle} 45 45)`} />
-            
-            {/* Antenna */}
             <line x1="75" y1="30" x2="75" y2="22" stroke="#6AAAD4" strokeWidth="2" />
             <circle cx="75" cy="22" r="3" fill="#90C0E0">
               <animate attributeName="opacity" values="1;0.4;1" dur="1s" repeatCount="indefinite" />
@@ -393,7 +340,6 @@ function RoboDog({ name, cw }) {
         )}
       </svg>
       
-      {/* Status badge */}
       <div style={{
         position: "absolute", bottom: -8, left: "50%",
         transform: `translateX(-50%) scaleX(${flip ? -1 : 1})`,
@@ -409,7 +355,6 @@ function RoboDog({ name, cw }) {
       </div>
     </div>
 
-    {/* Care message bubble */}
     {showC && <div style={{
       position: "fixed", left: Math.max(10, Math.min(posX - 80, window.innerWidth - 210)),
       bottom: 125, zIndex: 51,
@@ -421,7 +366,6 @@ function RoboDog({ name, cw }) {
       fontWeight: 500
     }}>
       {care}
-      {/* Speech bubble pointer */}
       <div style={{
         position: "absolute", bottom: -8, left: "50%", transform: "translateX(-50%)",
         width: 0, height: 0, borderLeft: "8px solid transparent", borderRight: "8px solid transparent",
@@ -479,6 +423,102 @@ function Naming({ onName }) {
   const [mousePos, setMousePos] = useState({ x: 0, y: 0 });
   const flowerIdRef = useRef(0);
 
+  // Butterflies - enhanced with orange/blue colors from image
+  const [butterflies, setButterflies] = useState(
+    Array.from({ length: 8 }, (_, i) => ({
+      id: i,
+      restX: 5 + Math.random() * 20,
+      restY: 60 + Math.random() * 30,
+      x: 5 + Math.random() * 20,
+      y: 60 + Math.random() * 30,
+      isFlying: false,
+      wingPhase: Math.random() * Math.PI * 2,
+      targetX: 0,
+      targetY: 0,
+      scale: 0.7 + Math.random() * 0.5,
+      // Orange-tip butterfly from image
+      isOrange: i % 2 === 0,
+    }))
+  );
+
+  useEffect(() => {
+    const interval = setInterval(() => {
+      setButterflies(prev => prev.map(butterfly => {
+        if (!butterfly.isFlying) {
+          return {
+            ...butterfly,
+            wingPhase: butterfly.wingPhase + 0.05,
+          };
+        }
+
+        const dx = butterfly.targetX - butterfly.x;
+        const dy = butterfly.targetY - butterfly.y;
+        const dist = Math.sqrt(dx * dx + dy * dy);
+
+        if (dist < 5) {
+          return {
+            ...butterfly,
+            isFlying: false,
+            restX: butterfly.x,
+            restY: butterfly.y,
+            wingPhase: butterfly.wingPhase + 0.05,
+          };
+        }
+
+        return {
+          ...butterfly,
+          x: butterfly.x + dx * 0.05,
+          y: butterfly.y + dy * 0.05,
+          wingPhase: butterfly.wingPhase + 0.3,
+        };
+      }));
+    }, 40);
+    return () => clearInterval(interval);
+  }, []);
+
+  useEffect(() => {
+    const handleMove = (e) => {
+      const mx = (e.clientX / window.innerWidth) * 100;
+      const my = (e.clientY / window.innerHeight) * 100;
+
+      setButterflies(prev => prev.map(butterfly => {
+        const dx = butterfly.x - mx;
+        const dy = butterfly.y - my;
+        const dist = Math.sqrt(dx * dx + dy * dy);
+
+        if (dist < 15) {
+          const angle = Math.atan2(dy, dx);
+          const flyDistance = 20 + Math.random() * 30;
+          return {
+            ...butterfly,
+            isFlying: true,
+            targetX: butterfly.x + Math.cos(angle) * flyDistance,
+            targetY: Math.max(10, Math.min(85, butterfly.y + Math.sin(angle) * flyDistance)),
+          };
+        }
+
+        if (!butterfly.isFlying) {
+          const restDx = butterfly.restX - butterfly.x;
+          const restDy = butterfly.restY - butterfly.y;
+          const restDist = Math.sqrt(restDx * restDx + restDy * restDy);
+          
+          if (restDist > 1) {
+            return {
+              ...butterfly,
+              isFlying: true,
+              targetX: butterfly.restX,
+              targetY: butterfly.restY,
+            };
+          }
+        }
+
+        return butterfly;
+      }));
+    };
+    window.addEventListener("mousemove", handleMove);
+    return () => window.removeEventListener("mousemove", handleMove);
+  }, []);
+
   useEffect(() => {
     let lastSpawn = 0;
     const handleMove = (e) => {
@@ -535,9 +575,294 @@ function Naming({ onName }) {
       @keyframes fadeUp{from{opacity:0;transform:translateY(16px)}to{opacity:1;transform:translateY(0)}}
       @keyframes lilyFade{0%{opacity:1;transform:translate(0,0) scale(1) rotate(0deg)}100%{opacity:0;transform:translate(var(--dx),40px) scale(0.3) rotate(90deg)}}
       @keyframes giantLilyPulse{0%,100%{transform:translate(-50%,-50%) scale(1);opacity:.7}50%{transform:translate(-50%,-50%) scale(1.1);opacity:.9}}
+      @keyframes wingFlap{0%,100%{transform:rotateY(0deg)}50%{transform:rotateY(20deg)}}
     `}</style>
 
-    {/* Giant cursor lily */}
+    {/* ULTRA-DETAILED 35-BRANCH FLOWERING PLANT */}
+    <div style={{
+      position: "fixed",
+      bottom: 0,
+      left: 0,
+      width: "800px",
+      height: "100vh",
+      zIndex: 1997,
+      pointerEvents: "none",
+    }}>
+      <svg width="800" height="100%" viewBox="0 0 800 1000" preserveAspectRatio="xMinYMax meet">
+        <defs>
+          <linearGradient id="mainStemGrad" x1="0%" y1="0%" x2="0%" y2="100%">
+            <stop offset="0%" stopColor="#7BA862" />
+            <stop offset="50%" stopColor="#6B9852" />
+            <stop offset="100%" stopColor="#5A8842" />
+          </linearGradient>
+          <linearGradient id="branchStemGrad" x1="0%" y1="0%" x2="100%" y2="0%">
+            <stop offset="0%" stopColor="#6B9852" />
+            <stop offset="100%" stopColor="#7BA862" />
+          </linearGradient>
+          
+          <radialGradient id="petalWhite1">
+            <stop offset="0%" stopColor="#FFFFFF" />
+            <stop offset="30%" stopColor="#F5F0FF" />
+            <stop offset="70%" stopColor="#E8DFFF" />
+            <stop offset="100%" stopColor="#D5C5F0" />
+          </radialGradient>
+          <radialGradient id="petalPink1">
+            <stop offset="0%" stopColor="#FFE6F5" />
+            <stop offset="40%" stopColor="#F5D5E8" />
+            <stop offset="100%" stopColor="#E8C5D8" />
+          </radialGradient>
+          <radialGradient id="petalLavender">
+            <stop offset="0%" stopColor="#F0E8FF" />
+            <stop offset="50%" stopColor="#E0D0F8" />
+            <stop offset="100%" stopColor="#C8B0E8" />
+          </radialGradient>
+          
+          <radialGradient id="centerYellow">
+            <stop offset="0%" stopColor="#FFF9CC" />
+            <stop offset="30%" stopColor="#FFEB66" />
+            <stop offset="70%" stopColor="#FFD93D" />
+            <stop offset="100%" stopColor="#CC9A2B" />
+          </radialGradient>
+          
+          <filter id="realisticGlow">
+            <feGaussianBlur stdDeviation="1.5" result="coloredBlur"/>
+            <feMerge>
+              <feMergeNode in="coloredBlur"/>
+              <feMergeNode in="SourceGraphic"/>
+            </feMerge>
+          </filter>
+          <filter id="petalShadow">
+            <feDropShadow dx="0" dy="1" stdDeviation="1" floodOpacity="0.2"/>
+          </filter>
+          <filter id="leafShadow">
+            <feDropShadow dx="1" dy="2" stdDeviation="2" floodOpacity="0.15"/>
+          </filter>
+        </defs>
+        
+        <g>
+          {Array.from({ length: 35 }, (_, i) => {
+            const yBase = 1000 - (i * 25);
+            const xStart = 50 + (i % 3) * 15;
+            const xEnd = xStart + 80 + Math.random() * 120;
+            const yEnd = yBase - 40 - Math.random() * 80;
+            const curvature = 40 + Math.random() * 60;
+            const dur = 4 + Math.random() * 3;
+            const delay = Math.random() * 2;
+            
+            return (
+              <g key={`branch-${i}`}>
+                <path 
+                  d={`M ${xStart} ${yBase} Q ${xStart + curvature} ${yBase - curvature} ${xEnd} ${yEnd}`}
+                  stroke="url(#branchStemGrad)" 
+                  strokeWidth={4 - (i % 5) * 0.5} 
+                  fill="none" 
+                  strokeLinecap="round"
+                  opacity="0.85"
+                  filter="url(#leafShadow)">
+                  <animateTransform 
+                    attributeName="transform" 
+                    type="rotate" 
+                    values={`0 ${xStart} ${yBase}; ${2 + Math.random() * 2} ${xStart} ${yBase}; -${2 + Math.random() * 2} ${xStart} ${yBase}; 0 ${xStart} ${yBase}`}
+                    dur={`${dur}s`} 
+                    begin={`${delay}s`}
+                    repeatCount="indefinite" />
+                </path>
+                
+                <g transform={`translate(${xEnd}, ${yEnd})`}>
+                  <g>
+                    <animateTransform 
+                      attributeName="transform" 
+                      type="rotate" 
+                      values={`0 0 0; ${-1.5 + Math.random()} 0 0; ${1.5 - Math.random()} 0 0; 0 0 0`}
+                      dur={`${dur + 1}s`} 
+                      begin={`${delay}s`}
+                      repeatCount="indefinite" />
+                    
+                    {[0, 90, 180, 270].map((angle, pi) => (
+                      <g key={`petal-${angle}`} transform={`rotate(${angle + (i * 15) % 360})`}>
+                        <ellipse 
+                          cx="0" 
+                          cy="-12" 
+                          rx="5" 
+                          ry="10" 
+                          fill={`url(#${['petalWhite1', 'petalPink1', 'petalLavender'][i % 3]})`}
+                          stroke="#E8D8F8" 
+                          strokeWidth="0.3"
+                          opacity="0.95"
+                          filter="url(#petalShadow)">
+                          <animate 
+                            attributeName="opacity" 
+                            values="0.9;1;0.9" 
+                            dur={`${3 + Math.random()}s`} 
+                            begin={`${pi * 0.2}s`}
+                            repeatCount="indefinite" />
+                        </ellipse>
+                        
+                        <ellipse 
+                          cx="0" 
+                          cy="-6" 
+                          rx="4" 
+                          ry="7" 
+                          fill={`url(#${['petalWhite1', 'petalPink1', 'petalLavender'][i % 3]})`}
+                          stroke="#D8C8E8" 
+                          strokeWidth="0.3"
+                          opacity="0.92"
+                          filter="url(#petalShadow)">
+                        </ellipse>
+                        
+                        <path 
+                          d="M 0 -2 L 0 -18" 
+                          stroke="#C8B8D8" 
+                          strokeWidth="0.5" 
+                          opacity="0.35" />
+                        <path 
+                          d="M 0 -12 Q -2 -14 -3 -16" 
+                          stroke="#C8B8D8" 
+                          strokeWidth="0.3" 
+                          opacity="0.25" />
+                        <path 
+                          d="M 0 -12 Q 2 -14 3 -16" 
+                          stroke="#C8B8D8" 
+                          strokeWidth="0.3" 
+                          opacity="0.25" />
+                      </g>
+                    ))}
+                    
+                    <circle cx="0" cy="0" r="4" fill="url(#centerYellow)" opacity="0.98" />
+                    <circle cx="0" cy="0" r="3" fill="#FFEB66" opacity="0.9" />
+                    
+                    {Array.from({ length: 8 }, (_, si) => {
+                      const sAngle = (si / 8) * Math.PI * 2;
+                      return (
+                        <circle 
+                          key={`stamen-${si}`}
+                          cx={Math.cos(sAngle) * 2.5} 
+                          cy={Math.sin(sAngle) * 2.5} 
+                          r="0.5" 
+                          fill="#CC9A2B" 
+                          opacity="0.8" />
+                      );
+                    })}
+                    <circle cx="0" cy="0" r="1.5" fill="#FFD93D" opacity="0.7" />
+                  </g>
+                </g>
+                
+                {Array.from({ length: 2 + i % 2 }, (_, li) => {
+                  const leafX = xStart + (xEnd - xStart) * (0.3 + li * 0.3);
+                  const leafY = yBase - (yBase - yEnd) * (0.3 + li * 0.3);
+                  const leafRotate = (i % 2 === 0 ? -1 : 1) * (25 + li * 10);
+                  
+                  return (
+                    <g key={`leaf-${li}`} transform={`translate(${leafX}, ${leafY}) rotate(${leafRotate})`}>
+                      <ellipse 
+                        cx="0" 
+                        cy="0" 
+                        rx="12" 
+                        ry="20" 
+                        fill="#5A9CD0" 
+                        opacity="0.88" 
+                        filter="url(#leafShadow)">
+                        <animateTransform 
+                          attributeName="transform" 
+                          type="rotate" 
+                          values={`0 0 0; ${-3 + Math.random() * 2} 0 0; ${3 - Math.random() * 2} 0 0; 0 0 0`}
+                          dur={`${dur + 0.5}s`} 
+                          begin={`${delay + li * 0.3}s`}
+                          repeatCount="indefinite" />
+                      </ellipse>
+                      
+                      <path d="M 0 -20 L 0 20" stroke="#4A8AB4" strokeWidth="1" opacity="0.5" />
+                      <path d="M 0 -12 Q -5 -10 -8 -6" stroke="#4A8AB4" strokeWidth="0.7" opacity="0.4" />
+                      <path d="M 0 -12 Q 5 -10 8 -6" stroke="#4A8AB4" strokeWidth="0.7" opacity="0.4" />
+                      <path d="M 0 0 Q -7 2 -10 6" stroke="#4A8AB4" strokeWidth="0.7" opacity="0.4" />
+                      <path d="M 0 0 Q 7 2 10 6" stroke="#4A8AB4" strokeWidth="0.7" opacity="0.4" />
+                      <path d="M 0 12 Q -5 14 -7 16" stroke="#4A8AB4" strokeWidth="0.7" opacity="0.4" />
+                      <path d="M 0 12 Q 5 14 7 16" stroke="#4A8AB4" strokeWidth="0.7" opacity="0.4" />
+                    </g>
+                  );
+                })}
+              </g>
+            );
+          })}
+        </g>
+      </svg>
+    </div>
+
+    {/* Orange-tip butterflies from image */}
+    {butterflies.map(butterfly => {
+      const wingFlap = butterfly.isFlying ? Math.sin(butterfly.wingPhase) : Math.sin(butterfly.wingPhase) * 0.3;
+      const leftWingRotate = wingFlap * 35;
+      const rightWingRotate = -wingFlap * 35;
+      
+      return (
+        <div key={butterfly.id} style={{
+          position: "fixed",
+          left: `${butterfly.x}%`,
+          top: `${butterfly.y}%`,
+          zIndex: 1999,
+          pointerEvents: "none",
+          transform: `scale(${butterfly.scale})`,
+          filter: "drop-shadow(0 2px 8px rgba(255,140,0,0.3))",
+          transition: butterfly.isFlying ? "none" : "all 0.5s ease-out",
+        }}>
+          <svg width="55" height="45" viewBox="0 0 55 45">
+            <defs>
+              {butterfly.isOrange ? (
+                <>
+                  <radialGradient id={`orangeWingGrad${butterfly.id}`}>
+                    <stop offset="0%" stopColor="#FF8C00" />
+                    <stop offset="50%" stopColor="#FF7700" />
+                    <stop offset="100%" stopColor="#FF6600" />
+                  </radialGradient>
+                  <radialGradient id={`whiteWingGrad${butterfly.id}`}>
+                    <stop offset="0%" stopColor="#FFFFFF" />
+                    <stop offset="70%" stopColor="#F8F8F8" />
+                    <stop offset="100%" stopColor="#E8E8E8" />
+                  </radialGradient>
+                </>
+              ) : (
+                <radialGradient id={`blueWingGrad${butterfly.id}`}>
+                  <stop offset="0%" stopColor="#90C0E0" />
+                  <stop offset="50%" stopColor="#6AAAD4" />
+                  <stop offset="100%" stopColor="#5A9CD0" />
+                </radialGradient>
+              )}
+            </defs>
+            
+            <g transform={`rotate(${leftWingRotate} 27.5 22.5)`} style={{ transformOrigin: '27.5px 22.5px' }}>
+              <ellipse cx="16" cy="20" rx="13" ry="17" fill={butterfly.isOrange ? `url(#whiteWingGrad${butterfly.id})` : `url(#blueWingGrad${butterfly.id})`} opacity="0.95" />
+              {butterfly.isOrange && (
+                <ellipse cx="10" cy="15" rx="8" ry="10" fill={`url(#orangeWingGrad${butterfly.id})`} opacity="0.9" />
+              )}
+              <ellipse cx="13" cy="30" rx="9" ry="11" fill={butterfly.isOrange ? `url(#whiteWingGrad${butterfly.id})` : `url(#blueWingGrad${butterfly.id})`} opacity="0.9" />
+              <circle cx="16" cy="16" r="2.5" fill={butterfly.isOrange ? "#FFF" : "#A8CCE8"} opacity="0.8" />
+              <circle cx="19" cy="21" r="1.5" fill={butterfly.isOrange ? "#FF6600" : "#3A7CB0"} opacity="0.5" />
+              <circle cx="11" cy="26" r="2" fill={butterfly.isOrange ? "#FFF" : "#A8CCE8"} opacity="0.7" />
+            </g>
+            
+            <g transform={`rotate(${rightWingRotate} 27.5 22.5)`} style={{ transformOrigin: '27.5px 22.5px' }}>
+              <ellipse cx="39" cy="20" rx="13" ry="17" fill={butterfly.isOrange ? `url(#whiteWingGrad${butterfly.id})` : `url(#blueWingGrad${butterfly.id})`} opacity="0.95" />
+              {butterfly.isOrange && (
+                <ellipse cx="45" cy="15" rx="8" ry="10" fill={`url(#orangeWingGrad${butterfly.id})`} opacity="0.9" />
+              )}
+              <ellipse cx="42" cy="30" rx="9" ry="11" fill={butterfly.isOrange ? `url(#whiteWingGrad${butterfly.id})` : `url(#blueWingGrad${butterfly.id})`} opacity="0.9" />
+              <circle cx="39" cy="16" r="2.5" fill={butterfly.isOrange ? "#FFF" : "#A8CCE8"} opacity="0.8" />
+              <circle cx="36" cy="21" r="1.5" fill={butterfly.isOrange ? "#FF6600" : "#3A7CB0"} opacity="0.5" />
+              <circle cx="44" cy="26" r="2" fill={butterfly.isOrange ? "#FFF" : "#A8CCE8"} opacity="0.7" />
+            </g>
+            
+            <ellipse cx="27.5" cy="22.5" rx="2.5" ry="11" fill={butterfly.isOrange ? "#8B5A00" : "#2A5A8A"} />
+            <circle cx="27.5" cy="16" r="3" fill={butterfly.isOrange ? "#A07030" : "#3A7CB0"} />
+            
+            <path d="M 27.5 16 Q 25.5 12 24.5 10" stroke={butterfly.isOrange ? "#6B4500" : "#2A5A8A"} strokeWidth="1" fill="none" strokeLinecap="round" />
+            <circle cx="24.5" cy="10" r="1.2" fill={butterfly.isOrange ? "#6B4500" : "#2A5A8A"} />
+            <path d="M 27.5 16 Q 29.5 12 30.5 10" stroke={butterfly.isOrange ? "#6B4500" : "#2A5A8A"} strokeWidth="1" fill="none" strokeLinecap="round" />
+            <circle cx="30.5" cy="10" r="1.2" fill={butterfly.isOrange ? "#6B4500" : "#2A5A8A"} />
+          </svg>
+        </div>
+      );
+    })}
+
     <div style={{ position: "fixed", left: mousePos.x, top: mousePos.y, zIndex: 2002, pointerEvents: "none", transform: "translate(-50%,-50%)", animation: "giantLilyPulse 2s ease-in-out infinite" }}>
       <svg width="60" height="60" viewBox="0 0 60 60">
         <defs>
@@ -557,17 +882,14 @@ function Naming({ onName }) {
       </svg>
     </div>
 
-    {/* Cursor glow ring */}
     <div style={{ position: "fixed", left: mousePos.x, top: mousePos.y, zIndex: 2001, pointerEvents: "none", transform: "translate(-50%,-50%)", width: 90, height: 90, borderRadius: "50%", background: "radial-gradient(circle, rgba(106,170,212,.12) 0%, transparent 70%)", transition: "left .05s, top .05s" }}/>
 
-    {/* Trail flowers */}
     {flowers.map(f => (
       <div key={f.id} style={{ position: "fixed", left: f.x, top: f.y, zIndex: 2001, pointerEvents: "none", transform: "translate(-50%,-50%)", "--dx": `${f.drift}px`, animation: "lilyFade 2s ease-out forwards" }}>
         <LilySVG size={f.size} rotation={f.rotation} lilyType={f.lilyType} />
       </div>
     ))}
 
-    {/* Floating ambient lilies */}
     {[...Array(8)].map((_, i) => (
       <div key={`ambient-${i}`} style={{ position: "fixed", left: `${10 + (i * 12) % 90}%`, top: `${5 + (i * 17) % 85}%`, zIndex: 1999, pointerEvents: "none", opacity: .08 + (i % 3) * .04, animation: `bob ${3 + i * .5}s ease-in-out ${i * .3}s infinite`, transform: `rotate(${i * 45}deg) scale(${.6 + (i % 4) * .2})` }}>
         <svg width="50" height="50" viewBox="0 0 60 60">
@@ -577,9 +899,8 @@ function Naming({ onName }) {
       </div>
     ))}
 
-    <div style={{ textAlign: "center", animation: "fadeUp .7s ease both", maxWidth: 380, padding: "0 24px", position: "relative", zIndex: 2000 }}>
-      <div style={{ animation: "bob 3s ease-in-out infinite", marginBottom: 16 }}>
-        {/* Robo-dog preview in naming screen */}
+    <div style={{ textAlign: "center", animation: "fadeUp .7s ease both", maxWidth: 380, padding: "0 24px", position: "relative", zIndex: 2000, margin: "0 auto" }}>
+      <div style={{ animation: "bob 3s ease-in-out infinite", marginBottom: 16, display: "flex", justifyContent: "center" }}>
         <svg width="150" height="120" viewBox="0 0 120 90">
           <defs>
             <linearGradient id="previewBodyGrad" x1="0%" y1="0%" x2="0%" y2="100%">
@@ -614,9 +935,9 @@ function Naming({ onName }) {
         </svg>
       </div>
       <h1 style={{ fontSize: 28, fontWeight: 300, color: "#A8CCE8", margin: "0 0 6px" }}>Ironclad Jurist</h1>
-      <p style={{ fontSize: 14, color: "#4A7090", margin: "0 0 6px" }}>Your legal AI, Tan</p>
-      <p style={{ fontSize: 13, color: "#2E5070", margin: "0 0 20px" }}>Name your robo-dog first!</p>
-      <input value={n} onChange={e => setN(e.target.value)} onKeyDown={e => { if (e.key === "Enter" && n.trim()) onName(n.trim()); }} placeholder="Name your robo-dog..." autoFocus
+      <p style={{ fontSize: 14, color: "#4A7090", margin: "0 0 6px" }}>Your Legal AI for Tan</p>
+      <p style={{ fontSize: 13, color: "#2E5070", margin: "0 0 20px" }}>Name your study buddy first!</p>
+      <input value={n} onChange={e => setN(e.target.value)} onKeyDown={e => { if (e.key === "Enter" && n.trim()) onName(n.trim()); }} placeholder="Name your study buddy..." autoFocus
         style={{ width: "100%", padding: "14px 20px", borderRadius: 14, border: "1px solid rgba(106,170,212,.12)", background: "rgba(106,170,212,.04)", color: "#B8D0E8", fontSize: 16, textAlign: "center", outline: "none", boxSizing: "border-box", cursor: "none" }} />
       <button onClick={() => { if (n.trim()) onName(n.trim()); }} disabled={!n.trim()} style={{ marginTop: 12, padding: "12px 36px", borderRadius: 18, border: "none", cursor: n.trim() ? "none" : "default", background: n.trim() ? "linear-gradient(135deg,#1A3A5A,#2A5070)" : "rgba(106,170,212,.08)", color: n.trim() ? "#C8E0F8" : "#2A4A6A", fontSize: 15 }}>Start</button>
     </div>
@@ -787,68 +1108,52 @@ export default function App() {
             </div>
           </div>
           <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
-            {streaming && <span style={{ fontSize: 11, color: "#6AAAD4", animation: "lilypulse 1.3s infinite" }}>● Streaming</span>}
-            <div style={{ width: 6, height: 6, borderRadius: "50%", background: "#50B880" }} /><span style={{ fontSize: 10, color: "#408868" }}>LIVE</span>
+            <div style={{ fontSize: 11, color: "#4A7090" }}>🐾 {pet}</div>
           </div>
         </div>
 
-        {showJ && <div style={{ padding: "10px 20px", background: "rgba(106,170,212,.04)", borderBottom: "1px solid rgba(106,170,212,.04)", animation: "msgUp .3s ease both" }}><div style={{ maxWidth: 780, margin: "0 auto", fontSize: 14, color: "#70A8C8", fontStyle: "italic", textAlign: "center" }}>{joke}</div></div>}
+        {showJ && <div style={{ position: "fixed", top: 90, left: "50%", transform: "translateX(-50%)", zIndex: 30, background: "linear-gradient(135deg,#1A3050,#0E2440)", border: "1px solid rgba(106,170,212,.15)", borderRadius: 16, padding: "14px 22px", maxWidth: 500, fontSize: 14, color: "#A0C8E8", textAlign: "center", lineHeight: 1.8, animation: "slideUp .3s ease both", boxShadow: "0 8px 32px rgba(0,0,0,.5)" }}>{joke}</div>}
 
-        <div style={{ flex: 1, overflowY: "auto", paddingBottom: 20 }}>
-          {!active && !msgs.length && !loading && !streaming && (
-            <div style={{ maxWidth: 600, margin: "0 auto", padding: "60px 20px", textAlign: "center", animation: "slideUp .6s ease both" }}>
-              <div style={{ fontSize: 40, marginBottom: 12 }}>⚖️</div>
-              <h1 style={{ fontSize: 28, fontWeight: 300, color: "#88B8D8", margin: "0 0 8px" }}>What are you working on, Tan?</h1>
-              <p style={{ fontSize: 14, color: "#3A6088", margin: "0 0 30px", lineHeight: 1.6 }}>{pet} is running around! Ask anything about Indian or foreign law.</p>
-              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8, maxWidth: 500, margin: "0 auto" }}>
-                {[
-                  { q: "Explain Basic Structure doctrine after Kesavananda Bharati with foreign comparisons", icon: "🏛️" },
-                  { q: "Moot court arguments on right to privacy under Article 21 post-Puttaswamy", icon: "⚔️" },
-                  { q: "Full project on cybercrime under IT Act and BNS with UK/US comparison", icon: "📄" },
-                  { q: "Latest SC judgments on environmental protection and Article 48A", icon: "📰" },
-                ].map((s, i) => (
-                  <button key={i} onClick={() => { setInput(s.q); if (!active) newChat(); setTimeout(() => inputRef.current?.focus(), 150); }}
-                    style={{ padding: "14px", background: "rgba(106,170,212,.02)", border: "1px solid rgba(106,170,212,.05)", borderRadius: 12, textAlign: "left", fontSize: 13, color: "#6A9CC0", lineHeight: 1.5, transition: "all .25s" }}
-                    onMouseEnter={e => { e.currentTarget.style.background = "rgba(106,170,212,.07)"; e.currentTarget.style.transform = "translateY(-2px)"; }}
-                    onMouseLeave={e => { e.currentTarget.style.background = "rgba(106,170,212,.02)"; e.currentTarget.style.transform = "none"; }}
-                  ><span style={{ fontSize: 18, display: "block", marginBottom: 6 }}>{s.icon}</span>{s.q}</button>
-                ))}
-              </div>
-            </div>
-          )}
-
-          {msgs.map((m, i) => <Msg key={`${active}-${i}`} msg={m} onPDF={generatePDF} onAction={p => send("Continue analysis", p)} isStreaming={streaming && i === msgs.length - 1 && m.role === "assistant"} />)}
-          {loading && (
-            <div style={{ maxWidth: 780, margin: "0 auto", padding: "16px 20px", animation: "msgUp .3s ease both" }}>
-              <div style={{ display: "flex", gap: 12, alignItems: "center" }}>
-                <div style={{ width: 32, height: 32, borderRadius: 10, background: "linear-gradient(135deg,#0E2A40,#1A3854)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 14, border: "1px solid rgba(106,170,212,.12)" }}>⚖️</div>
-                <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-                  <div style={{ display: "flex", gap: 3 }}>{[0, 1, 2].map(i => <div key={i} style={{ width: 5, height: 5, borderRadius: "50%", background: "#5A90B0", animation: `lilypulse 1.3s ease ${i * .2}s infinite` }} />)}</div>
-                  <span style={{ fontSize: 13, color: "#5A90B0", fontStyle: "italic" }}>Thinking...</span>
+        <div style={{ flex: 1, overflowY: "auto", position: "relative" }}>
+          {msgs.length === 0 && !loading && (
+            <div style={{ position: "absolute", inset: 0, display: "flex", alignItems: "center", justifyContent: "center", textAlign: "center" }}>
+              <div style={{ maxWidth: 420, padding: "0 24px", animation: "msgUp .5s ease both" }}>
+                <div style={{ fontSize: 48, marginBottom: 12, animation: "lilypulse 3s ease-in-out infinite" }}>⚖️</div>
+                <h2 style={{ fontSize: 26, color: "#A8CCE8", margin: "0 0 8px", fontWeight: 600 }}>Ironclad Jurist</h2>
+                <p style={{ fontSize: 15, color: "#4A7090", margin: "0 0 24px", lineHeight: 1.7 }}>Your Legal AI Research Assistant</p>
+                <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(140px, 1fr))", gap: 8 }}>
+                  {["Project help", "Moot arguments", "Latest cases", "Exam prep", "Legal concepts", "Case analysis"].map(t => (
+                    <button key={t} onClick={() => { setInput(t); inputRef.current?.focus(); }} style={{ padding: "10px 14px", borderRadius: 10, border: "1px solid rgba(106,170,212,.08)", background: "rgba(106,170,212,.03)", color: "#6090B0", fontSize: 13, cursor: "pointer", transition: "all .2s" }}
+                      onMouseEnter={e => { e.currentTarget.style.background = "rgba(106,170,212,.08)"; e.currentTarget.style.borderColor = "rgba(106,170,212,.15)"; }}
+                      onMouseLeave={e => { e.currentTarget.style.background = "rgba(106,170,212,.03)"; e.currentTarget.style.borderColor = "rgba(106,170,212,.08)"; }}>{t}</button>
+                  ))}
                 </div>
               </div>
             </div>
           )}
+
+          {msgs.map((m, i) => <Msg key={i} msg={m} onPDF={generatePDF} onAction={t => send(msgs[msgs.length - 2]?.content || "", t)} isStreaming={i === msgs.length - 1 && streaming} />)}
+          {loading && <div style={{ maxWidth: 780, margin: "0 auto", padding: "16px 20px", animation: "msgUp .3s ease both" }}>
+            <div style={{ display: "flex", gap: 12, alignItems: "flex-start" }}>
+              <div style={{ width: 32, height: 32, borderRadius: 10, background: "linear-gradient(135deg,#0E2A40,#1A3854)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 14, flexShrink: 0, border: "1px solid rgba(106,170,212,.12)" }}>⚖️</div>
+              <div style={{ flex: 1, paddingTop: 8 }}>
+                <div style={{ display: "flex", gap: 4 }}>
+                  {[0, 1, 2].map(i => <div key={i} style={{ width: 6, height: 6, borderRadius: "50%", background: "#4A7090", animation: `blink 1.4s ease-in-out ${i * .2}s infinite` }} />)}
+                </div>
+              </div>
+            </div>
+          </div>}
           <div ref={endRef} />
         </div>
 
-        <div style={{ padding: "12px 20px 16px", borderTop: "1px solid rgba(106,170,212,.03)", background: "rgba(6,10,18,.95)", backdropFilter: "blur(12px)" }}>
-          <div style={{ maxWidth: 780, margin: "0 auto" }}>
-            <div style={{ display: "flex", alignItems: "flex-end", gap: 8, background: "rgba(106,170,212,.03)", border: "1px solid rgba(106,170,212,.06)", borderRadius: 16, padding: "4px 4px 4px 16px", transition: "all .3s" }}
-              onFocus={e => { e.currentTarget.style.borderColor = "rgba(106,170,212,.18)"; e.currentTarget.style.boxShadow = "0 0 20px rgba(106,170,212,.05)"; }}
-              onBlur={e => { e.currentTarget.style.borderColor = "rgba(106,170,212,.06)"; e.currentTarget.style.boxShadow = "none"; }}>
-              <textarea ref={inputRef} value={input}
-                onChange={e => { setInput(e.target.value); e.target.style.height = "auto"; e.target.style.height = Math.min(e.target.scrollHeight, 120) + "px"; }}
-                onKeyDown={e => { if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); if (input.trim()) { let cid = active; if (!cid) cid = newChat(); setTimeout(() => send(input), 50); } } }}
-                placeholder="Ask anything, Tan..." rows={1}
-                style={{ flex: 1, border: "none", background: "transparent", color: "#A8C8E0", fontSize: 15, lineHeight: 1.6, resize: "none", padding: "8px 0", maxHeight: 120 }} />
-              <button onClick={() => { if (input.trim() && !loading && !streaming) { let cid = active; if (!cid) cid = newChat(); setTimeout(() => send(input), 50); } }} disabled={!input.trim() || loading || streaming}
-                style={{ width: 40, height: 40, borderRadius: 12, border: "none", background: input.trim() && !loading && !streaming ? "linear-gradient(135deg,#1A3A5A,#2A5070)" : "rgba(106,170,212,.06)", color: input.trim() && !loading && !streaming ? "#C8E0F8" : "#1A3050", display: "flex", alignItems: "center", justifyContent: "center", transition: "all .25s", flexShrink: 0 }}>
-                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><line x1="22" y1="2" x2="11" y2="13" /><polygon points="22 2 15 22 11 13 2 9 22 2" /></svg>
-              </button>
-            </div>
-            <div style={{ textAlign: "center", marginTop: 6 }}><span style={{ fontSize: 10, color: "#1A2A3A" }}>Ironclad Jurist can make mistakes. Verify on SCC Online / Manupatra.</span></div>
+        <div style={{ padding: "14px 18px", borderTop: "1px solid rgba(106,170,212,.03)", background: "rgba(6,10,18,.98)", backdropFilter: "blur(12px)" }}>
+          <div style={{ maxWidth: 780, margin: "0 auto", display: "flex", gap: 8, alignItems: "flex-end" }}>
+            <textarea ref={inputRef} value={input} onChange={e => setInput(e.target.value)} onKeyDown={e => { if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); send(input); } }} placeholder={`Ask ${pet} anything about law...`} rows={1} disabled={loading || streaming}
+              style={{ flex: 1, padding: "12px 16px", borderRadius: 12, border: "1px solid rgba(106,170,212,.1)", background: "rgba(106,170,212,.04)", color: "#C0D4E8", fontSize: 15, resize: "none", minHeight: 48, maxHeight: 200, fontFamily: "'Lora',Georgia,serif", lineHeight: 1.6 }}
+              onInput={e => { e.target.style.height = "auto"; e.target.style.height = Math.min(e.target.scrollHeight, 200) + "px"; }} />
+            <button onClick={() => send(input)} disabled={!input.trim() || loading || streaming} style={{ padding: "12px 20px", borderRadius: 12, border: "none", background: input.trim() && !loading && !streaming ? "linear-gradient(135deg,#1A3A5A,#2A5070)" : "rgba(106,170,212,.08)", color: input.trim() && !loading && !streaming ? "#C8E0F8" : "#2A4A6A", fontSize: 15, cursor: input.trim() && !loading && !streaming ? "pointer" : "not-allowed", transition: "all .2s", minWidth: 80 }}>Send</button>
           </div>
+          <div style={{ fontSize: 10, color: "#1A3040", textAlign: "center", marginTop: 8 }}>AI can make mistakes. Verify on SCC Online / Manupatra</div>
         </div>
       </div>
     </div>
