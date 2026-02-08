@@ -152,35 +152,39 @@ function Msg({ msg, onPDF, onAction, isStreaming }) {
   );
 }
 
-/* ═══ 3D ROBO-DOG PUPPY ═══ */
-function Puppy({ name, cw }) {
+/* ═══ ANIMATED SVG ROBO-DOG ═══ */
+function RoboDog({ name, cw }) {
   const [posX, setPosX] = useState(200);
-  const [st, setSt] = useState("walking"); // walking, sitting, sleeping
+  const [state, setState] = useState("walking");
   const [flip, setFlip] = useState(false);
   const [care, setCare] = useState("");
   const [showC, setShowC] = useState(false);
   const [hearts, setHearts] = useState([]);
+  const [wagSpeed, setWagSpeed] = useState(1);
+  const [walkCycle, setWalkCycle] = useState(0);
   const tgtX = useRef(400);
   const stTimer = useRef(null);
 
   // Care messages
   useEffect(() => {
-    const pop = () => { setCare(PET_MSGS[Math.floor(Math.random() * PET_MSGS.length)]); setShowC(true); setTimeout(() => setShowC(false), 5000); };
+    const pop = () => { 
+      setCare(PET_MSGS[Math.floor(Math.random() * PET_MSGS.length)]); 
+      setShowC(true); 
+      setTimeout(() => setShowC(false), 5000); 
+    };
     const t = setTimeout(pop, 15000);
     const iv = setInterval(pop, 100000 + Math.random() * 80000);
     return () => { clearTimeout(t); clearInterval(iv); };
   }, []);
 
-  // State cycle: walk → sit → walk → sleep → walk...
+  // State cycle
   useEffect(() => {
     const cycle = () => {
-      setSt(prev => {
+      setState(prev => {
         if (prev === "walking") {
-          // After walking, sit for 4-8 seconds
           stTimer.current = setTimeout(cycle, 4000 + Math.random() * 4000);
           return Math.random() > 0.3 ? "sitting" : "sleeping";
         } else {
-          // After sitting/sleeping, pick new target and walk for 5-10 seconds
           tgtX.current = 100 + Math.random() * (cw - 300);
           stTimer.current = setTimeout(cycle, 5000 + Math.random() * 5000);
           return "walking";
@@ -191,82 +195,239 @@ function Puppy({ name, cw }) {
     return () => { if (stTimer.current) clearTimeout(stTimer.current); };
   }, [cw]);
 
-  // Walking movement
+  // Walking animation
   useEffect(() => {
-    if (st !== "walking") return;
+    if (state !== "walking") return;
     let id;
     const tick = () => {
       setPosX(prev => {
         const dx = tgtX.current - prev;
         if (Math.abs(dx) < 2) return prev;
-        const speed = 0.8;
+        const speed = 1.2;
         if (dx > 0) setFlip(false); else setFlip(true);
         return prev + (dx > 0 ? speed : -speed);
       });
+      setWalkCycle(c => (c + 0.3) % (Math.PI * 2));
       id = requestAnimationFrame(tick);
     };
     id = requestAnimationFrame(tick);
     return () => cancelAnimationFrame(id);
-  }, [st]);
+  }, [state]);
 
-  useEffect(() => { if (hearts.length) { const t = setTimeout(() => setHearts(h => h.slice(1)), 1200); return () => clearTimeout(t); } }, [hearts]);
+  // Tail wagging animation
+  useEffect(() => {
+    if (state === "sleeping") {
+      setWagSpeed(0.2);
+    } else if (hearts.length > 0) {
+      setWagSpeed(3);
+    } else {
+      setWagSpeed(state === "walking" ? 1.5 : 0.8);
+    }
+  }, [state, hearts.length]);
 
-  const feed = () => setHearts(h => [...h, { id: Date.now(), x: Math.random() * 30 - 15 }]);
+  useEffect(() => { 
+    if (hearts.length) { 
+      const t = setTimeout(() => setHearts(h => h.slice(1)), 1200); 
+      return () => clearTimeout(t); 
+    } 
+  }, [hearts]);
 
-  const bobY = st === "walking" ? Math.sin(Date.now() * 0.005) * 3 : 0;
+  const feed = () => {
+    setHearts(h => [...h, { id: Date.now(), x: Math.random() * 30 - 15 }]);
+  };
+
+  // Walking bob
+  const bodyBob = state === "walking" ? Math.sin(walkCycle * 2) * 2 : 0;
+  
+  // Leg positions for walking
+  const frontLegAngle = state === "walking" ? Math.sin(walkCycle) * 25 : 0;
+  const backLegAngle = state === "walking" ? Math.sin(walkCycle + Math.PI) * 25 : 0;
+  
+  // Tail wag
+  const tailAngle = Math.sin(Date.now() * 0.005 * wagSpeed) * (state === "sleeping" ? 5 : 20);
 
   return (<>
     <div onClick={feed} style={{
       position: "fixed",
       left: posX - 60,
-      bottom: 10,
+      bottom: 20,
       zIndex: 50,
       cursor: "pointer",
-      transform: `scaleX(${flip ? -1 : 1}) translateY(${bobY}px)`,
-      transition: "left 0.3s linear, transform 0.15s",
+      transform: `scaleX(${flip ? -1 : 1})`,
+      transition: state === "walking" ? "none" : "left 0.5s ease-out",
     }} title={`Click ${name}!`}>
       {hearts.map(h => <div key={h.id} style={{ position: "absolute", top: -20, left: `calc(50% + ${h.x}px)`, fontSize: 16, animation: "heartFloat 1.2s ease-out forwards", pointerEvents: "none" }}>💙</div>)}
-      <div dangerouslySetInnerHTML={{ __html: `
-        <model-viewer
-          src="/Robo-dog.glb"
-          ${st === "walking" ? 'auto-rotate rotation-per-second="20deg"' : ''}
-          camera-orbit="0deg 75deg 2m"
-          disable-zoom
-          disable-pan
-          disable-tap
-          interaction-prompt="none"
-          style="width:120px;height:120px;background:transparent;--poster-color:transparent;"
-        ></model-viewer>
-      `}} />
-      {/* Status indicator */}
+      
+      <svg width="120" height="90" viewBox="0 0 120 90" style={{ filter: "drop-shadow(0 2px 8px rgba(106,170,212,0.3))" }}>
+        <defs>
+          <linearGradient id="bodyGrad" x1="0%" y1="0%" x2="0%" y2="100%">
+            <stop offset="0%" stopColor="#5A9CD0" />
+            <stop offset="100%" stopColor="#3A7CB0" />
+          </linearGradient>
+          <linearGradient id="headGrad" x1="0%" y1="0%" x2="0%" y2="100%">
+            <stop offset="0%" stopColor="#6AAAD4" />
+            <stop offset="100%" stopColor="#4A8AB4" />
+          </linearGradient>
+        </defs>
+
+        {/* Shadow */}
+        <ellipse cx="60" cy="82" rx="35" ry="6" fill="rgba(106,170,212,0.15)" />
+
+        {state === "sleeping" ? (
+          /* Sleeping pose - curled up */
+          <g transform="translate(0, 10)">
+            {/* Body - oval curled */}
+            <ellipse cx="60" cy="55" rx="28" ry="20" fill="url(#bodyGrad)" transform="rotate(-15 60 55)" />
+            
+            {/* Head tucked in */}
+            <circle cx="50" cy="48" r="14" fill="url(#headGrad)" />
+            
+            {/* Closed eyes */}
+            <path d="M 46 47 Q 48 49 50 47" stroke="#2A4A6A" strokeWidth="2" fill="none" strokeLinecap="round" />
+            <path d="M 52 47 Q 54 49 56 47" stroke="#2A4A6A" strokeWidth="2" fill="none" strokeLinecap="round" />
+            
+            {/* Ears down */}
+            <ellipse cx="44" cy="42" rx="4" ry="7" fill="#4A8AB4" transform="rotate(-30 44 42)" />
+            <ellipse cx="56" cy="42" rx="4" ry="7" fill="#4A8AB4" transform="rotate(30 56 42)" />
+            
+            {/* Legs tucked */}
+            <rect x="55" y="60" width="6" height="8" rx="3" fill="#3A7CB0" />
+            <rect x="65" y="62" width="6" height="8" rx="3" fill="#3A7CB0" />
+            
+            {/* Tail curled around */}
+            <path d="M 80 55 Q 75 45 65 48" stroke="#4A8AB4" strokeWidth="5" fill="none" strokeLinecap="round" transform={`rotate(${tailAngle * 0.3} 80 55)`} />
+            
+            {/* Zzz */}
+            <text x="75" y="35" fontSize="10" fill="#6AAAD4" opacity="0.6" fontFamily="Arial">Z</text>
+            <text x="82" y="28" fontSize="8" fill="#6AAAD4" opacity="0.5" fontFamily="Arial">z</text>
+            <text x="88" y="23" fontSize="6" fill="#6AAAD4" opacity="0.4" fontFamily="Arial">z</text>
+          </g>
+        ) : state === "sitting" ? (
+          /* Sitting pose */
+          <g transform={`translate(0, ${bodyBob})`}>
+            {/* Body - more upright */}
+            <ellipse cx="60" cy="50" rx="18" ry="22" fill="url(#bodyGrad)" />
+            
+            {/* Head */}
+            <circle cx="60" cy="35" r="15" fill="url(#headGrad)" />
+            
+            {/* Eyes */}
+            <circle cx="55" cy="33" r="3" fill="#2A4A6A" />
+            <circle cx="65" cy="33" r="3" fill="#2A4A6A" />
+            <circle cx="56" cy="32" r="1.5" fill="#C8E0F0" />
+            <circle cx="66" cy="32" r="1.5" fill="#C8E0F0" />
+            
+            {/* Nose */}
+            <circle cx="60" cy="40" r="2.5" fill="#2A4A6A" />
+            
+            {/* Ears - perked up */}
+            <ellipse cx="52" cy="25" rx="4" ry="8" fill="#4A8AB4" transform="rotate(-25 52 25)" />
+            <ellipse cx="68" cy="25" rx="4" ry="8" fill="#4A8AB4" transform="rotate(25 68 25)" />
+            
+            {/* Front legs - sitting */}
+            <rect x="52" y="60" width="6" height="15" rx="3" fill="#3A7CB0" />
+            <rect x="62" y="60" width="6" height="15" rx="3" fill="#3A7CB0" />
+            
+            {/* Back legs - folded */}
+            <ellipse cx="48" cy="68" rx="8" ry="6" fill="#3A7CB0" />
+            <ellipse cx="72" cy="68" rx="8" ry="6" fill="#3A7CB0" />
+            
+            {/* Tail - wagging */}
+            <path d="M 75 50 Q 85 45 90 50" stroke="#4A8AB4" strokeWidth="5" fill="none" strokeLinecap="round" transform={`rotate(${tailAngle} 75 50)`} />
+            
+            {/* Antenna */}
+            <line x1="60" y1="22" x2="60" y2="15" stroke="#6AAAD4" strokeWidth="2" />
+            <circle cx="60" cy="15" r="3" fill="#90C0E0" />
+          </g>
+        ) : (
+          /* Walking pose */
+          <g transform={`translate(0, ${bodyBob})`}>
+            {/* Body */}
+            <ellipse cx="60" cy="48" rx="20" ry="16" fill="url(#bodyGrad)" />
+            
+            {/* Head */}
+            <circle cx="75" cy="42" r="14" fill="url(#headGrad)" />
+            
+            {/* Eyes */}
+            <circle cx="72" cy="40" r="3" fill="#2A4A6A" />
+            <circle cx="80" cy="40" r="3" fill="#2A4A6A" />
+            <circle cx="73" cy="39" r="1.5" fill="#C8E0F0" />
+            <circle cx="81" cy="39" r="1.5" fill="#C8E0F0" />
+            
+            {/* Nose */}
+            <circle cx="78" cy="46" r="2.5" fill="#2A4A6A" />
+            
+            {/* Ears */}
+            <ellipse cx="70" cy="32" rx="4" ry="8" fill="#4A8AB4" transform="rotate(-20 70 32)" />
+            <ellipse cx="82" cy="32" rx="4" ry="8" fill="#4A8AB4" transform="rotate(20 82 32)" />
+            
+            {/* Front legs - animated */}
+            <g transform={`rotate(${frontLegAngle} 54 60)`}>
+              <rect x="51" y="60" width="6" height="18" rx="3" fill="#3A7CB0" />
+              <ellipse cx="54" cy="78" rx="4" ry="3" fill="#2A5A8A" />
+            </g>
+            <g transform={`rotate(${-frontLegAngle} 66 60)`}>
+              <rect x="63" y="60" width="6" height="18" rx="3" fill="#3A7CB0" />
+              <ellipse cx="66" cy="78" rx="4" ry="3" fill="#2A5A8A" />
+            </g>
+            
+            {/* Back legs - animated */}
+            <g transform={`rotate(${backLegAngle} 46 60)`}>
+              <rect x="43" y="60" width="6" height="18" rx="3" fill="#3A7CB0" />
+              <ellipse cx="46" cy="78" rx="4" ry="3" fill="#2A5A8A" />
+            </g>
+            <g transform={`rotate(${-backLegAngle} 74 60)`}>
+              <rect x="71" y="60" width="6" height="18" rx="3" fill="#3A7CB0" />
+              <ellipse cx="74" cy="78" rx="4" ry="3" fill="#2A5A8A" />
+            </g>
+            
+            {/* Tail - wagging fast */}
+            <path d="M 45 45 Q 35 40 30 45" stroke="#4A8AB4" strokeWidth="5" fill="none" strokeLinecap="round" transform={`rotate(${tailAngle} 45 45)`} />
+            
+            {/* Antenna */}
+            <line x1="75" y1="30" x2="75" y2="22" stroke="#6AAAD4" strokeWidth="2" />
+            <circle cx="75" cy="22" r="3" fill="#90C0E0">
+              <animate attributeName="opacity" values="1;0.4;1" dur="1s" repeatCount="indefinite" />
+            </circle>
+          </g>
+        )}
+      </svg>
+      
+      {/* Status badge */}
       <div style={{
-        position: "absolute", bottom: -4, left: "50%",
+        position: "absolute", bottom: -8, left: "50%",
         transform: `translateX(-50%) scaleX(${flip ? -1 : 1})`,
-        background: "rgba(6,12,22,.9)", padding: "2px 10px", borderRadius: 8,
-        border: "1px solid rgba(106,170,212,.15)", fontSize: 10, color: "#6AAAD4",
-        whiteSpace: "nowrap", fontWeight: 600, display: "flex", alignItems: "center", gap: 4
+        background: "rgba(6,12,22,.95)", padding: "3px 12px", borderRadius: 10,
+        border: "1px solid rgba(106,170,212,.2)", fontSize: 11, color: "#6AAAD4",
+        whiteSpace: "nowrap", fontWeight: 600, display: "flex", alignItems: "center", gap: 5,
+        boxShadow: "0 2px 8px rgba(0,0,0,.3)"
       }}>
         {name}
-        <span>{st === "walking" ? "🚶" : st === "sitting" ? "🐕" : "😴"}</span>
+        <span style={{ fontSize: 12 }}>
+          {state === "walking" ? "🚶" : state === "sitting" ? "🐕" : "😴"}
+        </span>
       </div>
-      {/* Shadow */}
-      <div style={{
-        position: "absolute", bottom: -2, left: "50%", transform: "translateX(-50%)",
-        width: 80, height: 8, borderRadius: "50%",
-        background: "radial-gradient(ellipse, rgba(106,170,212,.1) 0%, transparent 70%)"
-      }}/>
     </div>
 
     {/* Care message bubble */}
     {showC && <div style={{
       position: "fixed", left: Math.max(10, Math.min(posX - 80, window.innerWidth - 210)),
-      bottom: 140, zIndex: 51,
+      bottom: 125, zIndex: 51,
       background: "linear-gradient(135deg,#1A3050,#142840)",
-      border: "1px solid rgba(106,170,212,.15)", borderRadius: 12,
-      padding: "8px 14px", maxWidth: 200, fontSize: 12, color: "#90C0E0",
-      lineHeight: 1.5, textAlign: "center", animation: "msgUp .3s ease both",
-      boxShadow: "0 6px 20px rgba(0,0,0,.4)", pointerEvents: "none"
-    }}>{care}</div>}
+      border: "1px solid rgba(106,170,212,.2)", borderRadius: 14,
+      padding: "10px 16px", maxWidth: 200, fontSize: 13, color: "#90C0E0",
+      lineHeight: 1.6, textAlign: "center", animation: "msgUp .3s ease both",
+      boxShadow: "0 8px 24px rgba(0,0,0,.5)", pointerEvents: "none",
+      fontWeight: 500
+    }}>
+      {care}
+      {/* Speech bubble pointer */}
+      <div style={{
+        position: "absolute", bottom: -8, left: "50%", transform: "translateX(-50%)",
+        width: 0, height: 0, borderLeft: "8px solid transparent", borderRight: "8px solid transparent",
+        borderTop: "8px solid #1A3050"
+      }} />
+    </div>}
   </>);
 }
 
@@ -300,7 +461,7 @@ function Quiz({ onClose }) {
   return (<div style={ov} onClick={e => { if (e.target === e.currentTarget) onClose(); }}>
     <div style={{ background: "linear-gradient(155deg,#0C1822,#101A28)", borderRadius: 18, padding: 26, maxWidth: 400, width: "90%", border: "1px solid rgba(106,170,212,.08)", animation: "scIn .3s ease both" }}>
       <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 12 }}><span style={{ fontSize: 12, color: "#5A90B0" }}>Legal Quiz</span><span style={{ fontSize: 14, color: "#6AAAD4", fontWeight: 600 }}>{idx + 1}/{qs.length}</span></div>
-      <div style={{ background: "rgba(106,170,212,.04)", borderRadius: 12, padding: 14, marginBottom: 14 }}><p style={{ fontSize: 17, color: "#C0D8F0", margin: 0, lineHeight: 1.5 }}>{q.q}</p></div>
+      <div style={{ background: "rgba(106,170,212,.04)", borderRadius: 12, padding: 14, marginBottom: 14 }}><p style={{ fontSize: 17, color: "#C0D4F0", margin: 0, lineHeight: 1.5 }}>{q.q}</p></div>
       <div style={{ display: "flex", flexDirection: "column", gap: 5 }}>
         {q.o.map((o, i) => {
           let bg = "rgba(106,170,212,.03)", bd = "rgba(106,170,212,.06)", cl = "#90B8D0";
@@ -418,19 +579,39 @@ function Naming({ onName }) {
 
     <div style={{ textAlign: "center", animation: "fadeUp .7s ease both", maxWidth: 380, padding: "0 24px", position: "relative", zIndex: 2000 }}>
       <div style={{ animation: "bob 3s ease-in-out infinite", marginBottom: 16 }}>
-        <div dangerouslySetInnerHTML={{ __html: `
-          <model-viewer
-            src="/Robo-dog.glb"
-            auto-rotate
-            rotation-per-second="30deg"
-            camera-orbit="0deg 75deg 2.5m"
-            disable-zoom
-            disable-pan
-            disable-tap
-            interaction-prompt="none"
-            style="width:150px;height:150px;margin:0 auto;background:transparent;--poster-color:transparent;"
-          ></model-viewer>
-        `}} />
+        {/* Robo-dog preview in naming screen */}
+        <svg width="150" height="120" viewBox="0 0 120 90">
+          <defs>
+            <linearGradient id="previewBodyGrad" x1="0%" y1="0%" x2="0%" y2="100%">
+              <stop offset="0%" stopColor="#5A9CD0" />
+              <stop offset="100%" stopColor="#3A7CB0" />
+            </linearGradient>
+            <linearGradient id="previewHeadGrad" x1="0%" y1="0%" x2="0%" y2="100%">
+              <stop offset="0%" stopColor="#6AAAD4" />
+              <stop offset="100%" stopColor="#4A8AB4" />
+            </linearGradient>
+          </defs>
+          <ellipse cx="60" cy="50" rx="18" ry="22" fill="url(#previewBodyGrad)" />
+          <circle cx="60" cy="35" r="15" fill="url(#previewHeadGrad)" />
+          <circle cx="55" cy="33" r="3" fill="#2A4A6A" />
+          <circle cx="65" cy="33" r="3" fill="#2A4A6A" />
+          <circle cx="56" cy="32" r="1.5" fill="#C8E0F0" />
+          <circle cx="66" cy="32" r="1.5" fill="#C8E0F0" />
+          <circle cx="60" cy="40" r="2.5" fill="#2A4A6A" />
+          <ellipse cx="52" cy="25" rx="4" ry="8" fill="#4A8AB4" transform="rotate(-25 52 25)" />
+          <ellipse cx="68" cy="25" rx="4" ry="8" fill="#4A8AB4" transform="rotate(25 68 25)" />
+          <rect x="52" y="60" width="6" height="15" rx="3" fill="#3A7CB0" />
+          <rect x="62" y="60" width="6" height="15" rx="3" fill="#3A7CB0" />
+          <ellipse cx="48" cy="68" rx="8" ry="6" fill="#3A7CB0" />
+          <ellipse cx="72" cy="68" rx="8" ry="6" fill="#3A7CB0" />
+          <path d="M 75 50 Q 85 45 90 50" stroke="#4A8AB4" strokeWidth="5" fill="none" strokeLinecap="round">
+            <animateTransform attributeName="transform" type="rotate" values="0 75 50; 20 75 50; -20 75 50; 0 75 50" dur="1s" repeatCount="indefinite" />
+          </path>
+          <line x1="60" y1="22" x2="60" y2="15" stroke="#6AAAD4" strokeWidth="2" />
+          <circle cx="60" cy="15" r="3" fill="#90C0E0">
+            <animate attributeName="opacity" values="1;0.4;1" dur="1s" repeatCount="indefinite" />
+          </circle>
+        </svg>
       </div>
       <h1 style={{ fontSize: 28, fontWeight: 300, color: "#A8CCE8", margin: "0 0 6px" }}>Ironclad Jurist</h1>
       <p style={{ fontSize: 14, color: "#4A7090", margin: "0 0 6px" }}>Your legal AI, Tan</p>
@@ -590,7 +771,7 @@ export default function App() {
         textarea:focus,input:focus{outline:none}button{font-family:inherit;cursor:pointer}
       `}</style>
 
-      <Puppy name={pet} cw={cw} />
+      <RoboDog name={pet} cw={cw} />
       {quiz && <Quiz onClose={() => setQuiz(false)} />}
 
       <Sidebar chats={chats} activeId={active} onSelect={setActive} onNew={newChat} onDelete={delChat} petName={pet} onQuiz={() => setQuiz(true)} onJoke={triggerJoke} open={sbOpen} />
